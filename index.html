@@ -1,0 +1,2631 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>​Skills Lab - ​Skills Lab</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+    <style>
+        :root {
+            --primary: #1a2a6c;
+            --accent: #26B71F; 
+            --success: #27ae60;
+            --bg: #000000;
+            --nav-bg: #111111;
+            --card-bg: #111111;
+            --border-color: #333333;
+            --text-main: #ffffff;
+            --text-dim: #aaaaaa;
+            --orange-grad: linear-gradient(to right, #43FF52, #2364FF); 
+            
+            --btn-recharger: linear-gradient(40deg, #BD38FF 20%, #BD38FF 100%);
+            --btn-retirer: linear-gradient(145deg, #FF232C 5%, #F15FFF 100%);
+          
+            --btn-service: linear-gradient(90deg, #0DFF63 5%, #f1c40f 100%);
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        /* --- ÉCRAN DE CHARGEMENT RAPIDE --- */
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg); z-index: 9999; display: flex;
+            justify-content: center; align-items: center; flex-direction: column;
+        }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.1); border-left-color: var(--primary);
+            border-radius: 55%; width: 43px; height: 40px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .page { 
+            display: none; 
+            height: 100vh; 
+            overflow-y: auto; 
+            padding-bottom: 80px;
+        }
+        .page.active { display: block; }
+
+        /* --- ANNONCE POP-UP JAUNE --- */
+        .announcement-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 5000;
+        }
+        .announcement-box {
+            background: #BD38FF;
+            width: 88%; max-width: 340px; border-radius: 16px; padding: 25px 27px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); animation: fadeIn 0.3s ease;
+            position: relative;
+        }
+        .announcement-title { color: #BD38FF; text-align: center; font-size: 20px; font-weight: 900; margin-top: 0; margin-bottom: 15px;}
+        .announcement-content { font-size: 13px; color: #AEE1E9; line-height: 1.6; margin-bottom: 20px;}
+        .announcement-content ul { padding-left: 25px; margin: 10px 0; }
+        .announcement-content li { margin-bottom: 8px; font-weight: 500;}
+        .announcement-buttons { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-telegram-white { flex: 1; background: white; color: #333; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);}
+        .btn-close-announcement { background: #111; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; }
+
+        /* --- AUTH STYLE --- */
+        .auth-container { padding: 30px 20px; max-width: 400px; margin: auto; text-align: center; }
+        .auth-card { background: var(--card-bg); padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid var(--border-color); }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; font-size: 13px; margin-bottom: 5px; font-weight: 600; color: var(--text-dim); }
+
+        .only-register { display: block; }
+        .mode-login .only-register { display: none; }
+
+        .custom-select-wrapper { position: relative; display: flex; gap: 10px; }
+        .country-selector {
+            width: 110px; background: #BD38FF; border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-main);
+            padding: 10px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-weight: bold;
+        }
+        .country-options {
+            position: absolute; top: 50px; left: 0; width: 180px; background: var(--card-bg); color: var(--text-main);
+            border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); border: 1px solid var(--border-color); display: none; z-index: 100;
+        }
+        .country-options.show { display: block; animation: fadeIn 0.3s ease; }
+        .option { padding: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .option:hover { background: #BD38FF; }
+        .phone-input-field { flex: 1; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; background: #222; color: var(--text-main); }
+
+        input, select { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; font-family: 'Poppins', sans-serif; background: #222; color: var(--text-main);}
+        input:focus, select:focus { border-color: var(--primary); }
+        
+        .btn-auth {
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            color: white; border: none; width: 100%; padding: 15px; border-radius: 12px;
+            font-weight: bold; cursor: pointer; margin-top: 15px; font-size: 16px;
+        }
+
+        /* --- DASHBOARD STYLE --- */
+        .header-logo { text-align: center; padding: 20px 0 10px 0; }
+        .header-logo h1 { color: #f39c12; margin: 0; font-size: 32px; font-weight: 900; }
+        .user-phone-display { font-size: 14px; color: var(--text-dim); font-weight: bold; margin-bottom: 10px; }
+
+        .promo-banner {
+            margin: 0 15px 15px 15px; background: #BD38FF; border-radius: 15px; color: white;
+            display: flex; align-items: center; padding: 25px; position: relative; overflow: hidden;
+        }
+        .promo-text { flex: 1; z-index: 2; }
+        .promo-text h2 { margin: 0 0 10px 0; font-size: 18px; }
+        .promo-text p { font-size: 12px; margin-bottom: 15px; opacity: 0.9; }
+        .promo-btn { 
+            background: white; color: #BD38FF; border: none; padding: 8px 15px; 
+            border-radius: 20px; font-weight: bold; cursor: pointer;
+        }
+        .promo-img { width: 120px; position: absolute; right: -10px; bottom: -10px; opacity: 0.8; }
+
+        .action-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 0 15px; margin-bottom: 15px; }
+        .action-btn { 
+            color: white; border: none; 
+            padding: 15px 5px; border-radius: 12px; font-weight: bold; font-size: 13px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; gap: 5px;
+            cursor: pointer;
+        }
+        .btn-recharger { background: var(--btn-recharger); }
+        .btn-retirer { background: var(--btn-retirer); }
+        .btn-service { background: var(--btn-service); }
+
+        .scrolling-news {
+            background: var(--card-bg); margin: 0 15px 15px 15px; padding: 10px; border-radius: 5px;
+            border: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;
+            font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; color: #f39c12;
+        }
+
+        .stats-container { display: flex; flex-direction: column; gap: 12px; padding: 0 15px; margin-bottom: 20px; }
+        .stat-card {
+            background: var(--orange-grad); color: white; padding: 25px 20px;
+            border-radius: 40px; 
+            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.2);
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; text-align: center; 
+        }
+        .stat-card h3 { margin: 0; font-size: 26px; font-weight: 800; }
+        .stat-card p { margin: 5px 0 0 0; font-size: 13px; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* --- CAROUSEL D'ACCESSOIRES HORIZONTAL --- */
+        .accessory-carousel {
+            width: 100%; overflow: hidden; padding: 10px 0; margin-bottom: 20px;
+        }
+        .carousel-track {
+            display: flex; gap: 15px; width: max-content; padding: 0 15px;
+            animation: scrollHorizontal 15s linear infinite;
+        }
+        .carousel-track img {
+            width: 160px; height: 110px; object-fit: cover; border-radius: 15px; border: 2px solid var(--border-color);
+        }
+        @keyframes scrollHorizontal {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(calc(-50% - 7.5px)); }
+        }
+
+        /* --- STYLE PAGE PRODUITS --- */
+        .product-page-title { text-align: center; font-size: 22px; font-weight: bold; margin: 25px 0 15px 0; color: var(--text-main); }
+        .product-summary { display: flex; background: var(--card-bg); margin: 0 15px 20px; border-radius: 15px; padding: 15px 0; border: 1px solid var(--border-color);}
+        .summary-col { flex: 1; text-align: center; border-right: 1px solid var(--border-color); cursor: pointer; }
+        .summary-col:last-child { border-right: none; }
+        .summary-val { font-size: 18px; font-weight: bold; color: var(--text-main); display: block; margin-bottom: 5px; }
+        .summary-label { font-size: 11px; color: var(--text-dim); font-weight: 600;}
+        
+        .product-card { background: var(--card-bg); border-radius: 12px; padding: 15px; margin: 0 15px 15px; display: flex; align-items: center; border: 1px solid var(--border-color);}
+        .product-img { width: 70px; height: 90px; object-fit: contain; margin-right: 15px; border-radius: 8px; background: #31309D; padding: 5px; }
+        .product-info { flex: 1; }
+        .product-title { font-size: 15px; font-weight: bold; margin: 0 0 8px 0; color: var(--text-main); }
+        .product-detail { font-size: 11px; color: var(--text-dim); margin: 3px 0; }
+        .product-val { color: #98369D; font-weight: bold; }
+        .btn-buy { background: #fff; color: #000; border: none; padding: 10px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; height: fit-content; margin-left: 10px;}
+        .btn-buy.btn-disabled { background: #31309D; color: #98369D; cursor: not-allowed; }
+
+        /* --- STYLE DES COMMANDES ACHETÉES --- */
+        .my-order-card { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border-color); border-left: 4px solid var(--success); }
+        .my-order-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--border-color); padding-bottom: 10px; margin-bottom: 10px; }
+        .my-order-title { font-size: 16px; font-weight: bold; color: #28E993; margin: 0; }
+        .my-order-status { font-size: 10px; padding: 4px 8px; border-radius: 10px; color: white; font-weight: bold; }
+        .my-order-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; }
+        .my-order-label { color: var(--text-dim); }
+        .my-order-val { font-weight: bold; color: var(--text-main); }
+        .my-order-val.highlight { color: #31309D; font-size: 14px;}
+        .my-order-val.success { color: var(--success); }
+
+        /* --- MODALS PLEIN ÉCRAN --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg); display: none; flex-direction: column; z-index: 2000;
+            animation: slideUp 0.3s ease-out;
+        }
+        .modal-header { padding: 20px; display: flex; align-items: center; border-bottom: 1px solid var(--border-color); background: var(--card-bg);}
+        .modal-header i { font-size: 24px; cursor: pointer; color: var(--text-main); margin-right: 20px; }
+        .modal-header h2 { margin: 0; font-size: 18px; flex: 1; text-align: center; margin-right: 44px; color: var(--text-main); }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; background: var(--bg);}
+
+        /* VRAIES ALERTES */
+        .custom-popup-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 4000;
+        }
+        .custom-popup-box {
+            background: var(--card-bg); width: 85%; max-width: 320px; border-radius: 16px; padding: 25px;
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: fadeIn 0.3s ease; border: 1px solid var(--border-color);
+        }
+        .custom-popup-icon { font-size: 40px; margin-bottom: 15px; }
+        .custom-popup-title { margin: 0 0 10px 0; font-size: 18px; color: var(--text-main); font-weight: bold; }
+        .custom-popup-text { margin: 0 0 25px 0; font-size: 14px; color: var(--text-dim); line-height: 1.5; }
+        .custom-popup-buttons { display: flex; gap: 10px; justify-content: center; }
+        .custom-btn { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .btn-cancel { background: #31309D; color: var(--text-main); }
+        .btn-ok { background: #98369D; color: white; }
+
+        /* RECHARGE STYLES */
+        .recharge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
+        .amount-btn {
+            background: #98369D; border: 1.5px solid var(--border-color); padding: 15px 10px; border-radius: 12px;
+            font-weight: bold; cursor: pointer; text-align: center; transition: 0.2s; color: var(--text-main);
+        }
+        .amount-btn.selected { border-color: #31309D; background: rgba(243, 156, 18, 0.2); color: #28E993; }
+
+        .method-card {
+            display: flex; align-items: center; padding: 15px; border: 1.5px solid var(--border-color);
+            border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; background: var(--card-bg); color: var(--text-main);
+        }
+        .method-card.selected { border-color: #BD38FF; background: rgba(243, 156, 18, 0.2); }
+        .method-card img { width: 40px; height: 40px; border-radius: 8px; margin-right: 15px; object-fit: cover; }
+        .method-card span { font-weight: 600; font-size: 15px; }
+
+        .custom-amount-box { margin-top: 10px; background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); }
+        .input-recharge-wrapper { position: relative; }
+        .input-recharge-wrapper input { font-size: 18px; font-weight: bold; border: none; border-bottom: 2px solid #31309D; border-radius: 0; background: transparent; padding-right: 50px;}
+        .input-recharge-wrapper span { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); font-weight: bold; color: #A23939; }
+
+        .instructions-box { background-color: #28E993; padding: 18px; border-radius: 10px; margin-top: 20px; font-size: 12px; color: #31309D; line-height: 1.6; border: 1px solid var(--border-color); }
+        .instructions-box h3 { margin-top: 0; margin-bottom: 12px; font-size: 15px; color: var(--text-main); display: flex; align-items: center; gap: 8px;}
+        .instructions-box ol { padding-left: 20px; margin: 0; }
+        .instructions-box li { margin-bottom: 8px; }
+
+        /* --- STYLES GOPAY --- */
+        .gopay-op-btn { border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; width: 85px; text-align: center; cursor: pointer; transition: 0.2s; background: #31309D; }
+        .gopay-op-btn.selected { border: 2px solid #31309D; background: #A23939; }
+        .gopay-op-btn img { width: 35px; height: 35px; object-fit: cover; margin-bottom: 5px; border-radius: 5px;}
+        .gopay-op-btn span { font-size: 11px; font-weight: bold; display: block; color: var(--text-main); text-transform: uppercase;}
+
+        .gopay-input-box { display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 15px; background: #A23939;}
+        .gopay-input-box span { font-weight: bold; color: #BD38FF; margin-right: 10px; font-size: 16px;}
+        .gopay-input-box input { border: none; outline: none; flex: 1; font-size: 14px; background: transparent; color: var(--text-main);}
+
+        .gopay-submit { background: linear-gradient(to right, #28E993, #BD38FF); color: white; border: none; width: 100%; padding: 15px; border-radius: 25px; font-weight: bold; font-size: 16px; cursor: pointer; }
+
+        /* --- MODAL RETRAIT STYLES --- */
+        .withdraw-banner { background: linear-gradient(135deg, #31309D 0%, #A23939 100%); padding: 33px 20px; color: white; border-bottom: 1px solid var(--border-color); }
+        .withdraw-banner h2 { margin: 0; font-size: 26px; font-weight: 800; }
+        .withdraw-banner p { margin: 5px 0 0 0; font-size: 13px; color: #98369D; font-weight: 600; }
+        
+        .withdraw-form-container { background: var(--bg); padding: 20px; border-bottom: 1px solid var(--border-color); }
+        .wallet-select { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text-main);}
+        .wallet-select i.fa-credit-card { font-size: 24px; margin-right: 15px; color: var(--text-main); }
+        
+        .withdraw-input-group { margin-top: 20px; }
+        .withdraw-input-group label { font-weight: bold; font-size: 15px; display: block; margin-bottom: 15px; color: var(--text-main); }
+        .withdraw-input-wrapper { display: flex; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        .withdraw-input-wrapper span { font-weight: bold; margin-right: 10px; font-size: 16px; color: var(--text-main); }
+        .withdraw-input-wrapper input { border: none; font-size: 16px; outline: none; flex: 1; color: var(--text-main); background: transparent;}
+        
+        .withdraw-calc { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-main); margin-top: 15px; font-weight: 500;}
+        .withdraw-btn { background: #98369D; color: white; border: none; width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 25px; cursor: pointer; }
+        
+        .withdraw-rules { padding: 20px; background: var(--card-bg); }
+        .withdraw-rules h4 { color: var(--text-main); font-size: 15px; margin-top: 0; margin-bottom: 15px; border-left: 3px solid #f39c12; padding-left: 8px; }
+        .withdraw-rules p { color: var(--text-dim); font-size: 12px; line-height: 1.6; margin-bottom: 10px; }
+
+        /* --- PAGE EQUIPE STYLE --- */
+        .team-header { background: var(--orange-grad); padding: 23px; color: white; text-align: center; border-radius: 0 0 20px 20px; margin-bottom: 15px;}
+        .invite-box { background: var(--card-bg); padding: 15px; margin: 0 15px 15px; border-radius: 12px; border: 1px solid var(--border-color); }
+        .invite-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color); }
+        .invite-row:last-child { border-bottom: none; }
+        .invite-info span { display: block; font-size: 16px; font-weight: bold; color: var(--text-main); }
+        .invite-info small { font-size: 11px; color: var(--accent); }
+        .btn-copy-small { background: var(--orange-grad); color: white; border: none; padding: 8px 15px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        
+        .team-table-container { margin: 0 15px 15px; background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); }
+        .team-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 13px; }
+        .team-table th { background: #31309D; color: white; padding: 12px 10px; font-weight: 500; font-size: 12px; border-bottom: 1px solid var(--border-color);}
+        .team-table td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
+        
+        .team-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 0 15px 15px; }
+        .summary-card { background: #222; color: white; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--border-color);}
+        .summary-card h4 { margin: 0; font-size: 20px; color: #31309D; }
+        .summary-card p { margin: 5px 0 0; font-size: 11px; opacity: 0.9; }
+        
+        .team-rules { background: #98369D; color: #ccc; margin: 0 15px 20px; padding: 18px; border-radius: 12px; font-size: 12px; line-height: 1.6; border: 1px solid var(--border-color);}
+        .team-rules h4 { margin-top: 0; color: #A23939; font-size: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;}
+
+        /* --- STYLES MODAL DETAILS DE L'EQUIPE --- */
+        .team-detail-tabs { display: flex; justify-content: space-around; border-bottom: 1px solid var(--border-color); background: var(--card-bg); padding-top: 10px;}
+        .team-detail-tab { text-align: center; padding: 10px; cursor: pointer; flex: 1; color: var(--text-dim); }
+        .team-detail-tab.active { color: var(--text-main); font-weight: bold; border-bottom: 2px solid var(--text-main); }
+        .team-detail-tab-val { font-size: 16px; display: block; margin-bottom: 5px; color: var(--text-main);}
+        .team-detail-tab-level { font-size: 12px; }
+
+        .team-list-container { padding: 10px 20px; background: var(--bg); flex: 1; overflow-y: auto; }
+        .team-list-item { display: flex; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border-color); }
+        .team-list-icon { width: 40px; height: 40px; background: #E958AF; border-radius: 8px; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 10px; margin-right: 15px; }
+        .team-list-info { flex: 1; }
+        .team-list-phone { font-size: 14px; font-weight: bold; color: var(--text-main); margin: 0 0 5px 0; }
+        .team-list-date { font-size: 11px; color: var(--text-dim); margin: 0; }
+        .team-list-amount { font-size: 16px; font-weight: bold; color: var(--text-main); }
+        .no-more-data { text-align: center; padding: 20px; color: #E94084; font-size: 13px; margin-top: 20px;}
+
+        /* --- NOUVEAUX STYLES POUR LE PANNEAU ADMIN --- */
+        .admin-tabs { display: flex; overflow-x: auto; background: #222; padding: 0 10px; border-bottom: 1px solid var(--border-color);}
+        .admin-tab { color: #aaa; padding: 12px 15px; font-size: 13px; white-space: nowrap; cursor: pointer; border-bottom: 3px solid transparent; }
+        .admin-tab.active { color: white; font-weight: bold; border-bottom: 3px solid #f6d365; }
+        .admin-btn-small { padding: 6px 10px; border: none; border-radius: 6px; font-size: 11px; cursor: pointer; color: white; font-weight: bold; margin: 2px;}
+        .btn-edit { background: #3498db; }
+        .btn-approve { background: #27ae60; }
+        .btn-reject { background: #A23939; }
+        .btn-block { background: #98369D; }
+        .admin-content-section { display: none; }
+        .admin-content-section.active { display: block; }
+        
+        .admin-user-card { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--border-color); border-left: 4px solid #3498db;}
+        .admin-user-card.blocked { border-left: 4px solid #f39c12; opacity: 0.8; }
+        .admin-user-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px;}
+        .admin-user-label { color: #31309D; }
+        .admin-user-val { font-weight: bold; color: var(--text-main); text-align:right;}
+        .admin-user-actions { display: flex; gap: 5px; margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 10px;}
+
+        .admin-search-bar { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-family: 'Poppins', sans-serif; box-sizing: border-box; background: #222; color: var(--text-main);}
+
+        /* ========================================================
+           --- MODIFICATIONS DEMANDÉES (PAGE MIEN / COMPTE) ---
+           ======================================================== */
+        
+        /* 1. Arrière plan Bleu Noir (Blé noir) pour la page compte */
+        #page-mien {
+            background-color: #A23939; /* Bleu Noir profond */
+            min-height: 100vh;
+        }
+
+        .profile-header { background: var(--orange-grad); padding: 40px 20px; color: white; text-align: center; border-radius: 0 0 30px 30px; margin-bottom: 20px; }
+        .profile-icon { width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 55%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-size: 40px; }
+        
+        .profile-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 15px; margin-top: -30px; margin-bottom: 20px; }
+        
+        /* 2. Solde total et cumulé : Rond vers le bas */
+        .mini-stat-card { 
+            background: var(--card-bg); 
+            padding: 20px 15px; 
+            border-radius: 10px 10px 40px 40px; /* Bordures arrondies fortement vers le bas */
+            text-align: center; 
+            border: 1px solid var(--border-color); 
+            border-bottom: 3px solid #98369D; /* Accentuation esthétique en bas */
+            box-shadow: 0 8px 15px rgba(0,0,0,0.4);
+        }
+        .mini-stat-card h4 { margin: 0; color: #31309D; font-size: 18px; font-weight: 800; }
+        .mini-stat-card p { margin: 5px 0 0 0; font-size: 11px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; }
+        
+        /* 3. Options Recharger / Retrait Claires, Pros avec Images */
+        .profile-actions { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
+            padding: 0 15px; 
+            margin-bottom: 25px; 
+        }
+        .action-card-pro {
+            background: linear-gradient(145deg, #98369D, #A23939);
+            border: 1px solid #31309D;
+            border-radius: 20px;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: white;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .action-card-pro:active { transform: scale(0.95); }
+        .action-card-pro img {
+            width: 45px;
+            height: 45px;
+            margin-bottom: 8px;
+            object-fit: contain;
+        }
+        .action-card-pro span {
+            font-size: 13px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .menu-list { background: var(--card-bg); margin: 15px; border-radius: 15px; overflow: hidden; border: 1px solid var(--border-color); }
+        .menu-item { display: flex; align-items: center; padding: 18px; border-bottom: 1px solid var(--border-color); color: var(--text-main); text-decoration: none; cursor: pointer; }
+        .menu-item:last-child { border-bottom: none; }
+        .menu-item i { width: 35px; font-size: 18px; color: #31309D; }
+        .menu-item span { flex: 1; font-size: 15px; font-weight: 500; }
+        .menu-item .fa-chevron-right { color: #9E67E9; font-size: 12px; width: auto; }
+        .btn-logout { margin: 20px 15px 40px 15px; padding: 15px; background: #111; border: 1px solid #f39c12; color: #f39c12; text-align: center; border-radius: 12px; font-weight: bold; cursor: pointer; }
+
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 65px; background: var(--card-bg); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid var(--border-color); z-index: 100; }
+        .nav-item { color: #28E993; text-align: center; font-size: 10px; cursor: pointer; }
+        .nav-item i { font-size: 20px; display: block; margin-bottom: 3px; }
+        .nav-item.active { color: #E94084; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    </style>
+</head><body>
+
+    <div id="splash-screen">
+        <h1 style="color:#f39c12; font-size: 40px; margin-bottom: 20px; font-weight: 900;">​Skills Lab</h1>
+        <div class="spinner"></div>
+    </div>
+
+    <div class="announcement-overlay" id="announcement-modal">
+        <div class="announcement-box">
+            <h2 class="announcement-title" style="color: #f39c12;">Notification de la plateforme</h2>
+            <div class="announcement-content">
+                <b>✨ Bienvenue sur ​Skills Lab !</b><br>
+                ✔️ L'application de gestion de patrimoine et d'investissement la plus fiable !<br>
+                <ul>
+                    <li>Les nouveaux utilisateurs reçoivent 500) FCFA à l'inscription.</li>
+                    <li>Gagnez une commission de 26 %, 2 % et 1 % grâce à trois niveaux de parrainage.</li>
+                    <li>Lancement simultané dans trois pays.</li>
+                    <li>Investissement unique, 180 jours de rendements quotidiens.</li>
+                </ul>
+                ↪️ Commencez à bâtir votre patrimoine dès maintenant !
+            </div>
+            <div class="announcement-buttons">
+                <button class="btn-telegram-white" onclick="window.location.href='https://t.me/chaineofficieldeskillslab'">Chaîne Telegram</button>
+                <button class="btn-telegram-white" onclick="window.location.href='https://t.me/Skillslabgroupe'">Groupe Telegram</button>
+            </div>
+            <button class="btn-close-announcement" onclick="closeAnnouncement()">Désactiver les rappels</button>
+        </div>
+    </div>
+
+    <div class="custom-popup-overlay" id="custom-alert-modal">
+        <div class="custom-popup-box">
+            <i class="fas fa-bell custom-popup-icon" style="color: #f39c12;"></i>
+            <h3 class="custom-popup-title">Notification</h3>
+            <p class="custom-popup-text" id="custom-alert-text">Message</p>
+            <button class="custom-btn btn-ok" style="width:100%; background: #31309D;" onclick="closeCustomAlert()">OK</button>
+        </div>
+    </div>
+
+    <div class="custom-popup-overlay" id="custom-confirm-modal">
+        <div class="custom-popup-box">
+            <i class="fas fa-question-circle custom-popup-icon" style="color: #31309D;"></i>
+            <h3 class="custom-popup-title">Confirmation</h3>
+            <p class="custom-popup-text" id="custom-confirm-text">Voulez-vous continuer ?</p>
+            <div class="custom-popup-buttons">
+                <button class="custom-btn btn-cancel" id="btn-confirm-cancel" style="background:#98369D; color:white;">Annuler</button>
+                <button class="custom-btn btn-ok" id="btn-confirm-ok" style="background: #31309D;">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="recharge-modal">
+        <div class="modal-header" style="background: var(--nav-bg); border-bottom: 1px solid var(--border-color);">
+            <i class="fas fa-arrow-left" style="color: var(--text-main);" onclick="closeRechargeModal()"></i>
+            <h2 style="color: var(--text-main);">Dépôt de fonds</h2>
+        </div>
+        <div class="modal-body" style="padding: 0; background: var(--bg);">
+            <div id="step-amount" style="padding: 20px;">
+                <label style="font-weight: bold; font-size: 14px; color: var(--text-main);">1. Saisir le montant (FCFA)</label>
+                <div class="custom-amount-box" style="background: var(--card-bg); border: 1px solid var(--border-color);">
+                    <div class="input-recharge-wrapper">
+                        <input type="number" id="recharge-amount-input" placeholder="Min. 3000" style="background: transparent; color: var(--text-main);">
+                        <span>FCFA</span>
+                    </div>
+                </div>
+                <div class="recharge-grid">
+                    <div class="amount-btn" onclick="setRechargeAmount(3000, this)" style="background: var(--card-bg); border-color: var(--border-color); color: var(--text-main);">3 000 F</div>
+                    <div class="amount-btn" onclick="setRechargeAmount(6000, this)" style="background: var(--card-bg); border-color: var(--border-color); color: var(--text-main);">6 000 F</div>
+                    <div class="amount-btn" onclick="setRechargeAmount(15000, this)" style="background: var(--card-bg); border-color: var(--border-color); color: var(--text-main);">15 000 F</div>
+                    <div class="amount-btn" onclick="setRechargeAmount(25000, this)" style="background: var(--card-bg); border-color: var(--border-color); color: var(--text-main);">25 000 F</div>
+                    <div class="amount-btn" onclick="setRechargeAmount(50000, this)" style="background: var(--card-bg); border-color: var(--border-color); color: var(--text-main);">50 000 F</div>
+                </div>
+                
+                <div class="instructions-box" style="background: #DE2666; border: 1px solid #64E6E9; color: #31309D;">
+                    <h3 style="color: var(--text-main);"><i class="fas fa-info-circle" style="color:#DED155;"></i> Instructions de Dépôt</h3>
+                    <ol>
+                        <li>Le montant minimum de recharge est de <b>3 000 FCFA</b>.</li>
+                        <li>Vérifiez attentivement le numéro de réception avant d'effectuer le transfert pour éviter toute perte de fonds.</li>
+                        <li>Après un transfert réussi, votre compte sera crédité dans un délai de 5 à 10 minutes. Service automatisé 24h/24.</li>
+                        <li>Si l'argent n'apparaît pas sur votre solde après 10 minutes, veuillez contacter le service client.</li>
+                        <li>Ne sauvegardez jamais les anciens numéros de paiement. Utilisez toujours le numéro généré lors de votre demande.</li>
+                    </ol>
+                </div>
+                <button class="btn-auth" style="background: #31309D; color: #98369D;" onclick="goToStepCountry()">Suivant</button>
+            </div>            
+            <div id="step-country" style="display:none; padding: 20px;">
+                <label style="font-weight: bold; font-size: 14px; color: var(--text-main);">2. Choisir votre pays</label>
+                <div style="margin-top:15px;">
+                    <div class="method-card" onclick="setRechargeCountry('+226', this)" style="background: var(--card-bg); border-color: var(--border-color);">
+                        <span style="font-size: 24px; margin-right: 15px;">🇧🇫</span>
+                        <span style="color: var(--text-main);">Burkina Faso (+226)</span>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <div class="method-card" onclick="setRechargeCountry('+225', this)" style="flex:1; margin-bottom:0; padding: 10px; background: var(--card-bg); border-color: var(--border-color);">
+                            <span style="font-size: 20px; margin-right: 5px;">🇨🇮</span>
+                            <span style="font-size: 11px; color: var(--text-main);">Côte d'Ivoire</span>
+                        </div>
+                        <div class="method-card" onclick="setRechargeCountry('+223', this)" style="flex:1; margin-bottom:0; padding: 10px; background: var(--card-bg); border-color: var(--border-color);">
+                            <span style="font-size: 20px; margin-right: 5px;">🇲🇱</span>
+                            <span style="font-size: 11px; color: var(--text-main);">Mali</span>
+                         </div>
+                         <div class="method-card" onclick="setRechargeCountry('+237', this)" style="flex:1; margin-bottom:0; padding: 10px; background: var(--card-bg); border-color: var(--border-color);">
+                            <span style="font-size: 20px; margin-right: 5px;">🇨🇲</span>
+                            <span style="font-size: 11px; color: var(--text-main);">Cameroun</span>
+                        </div>
+                    </div>
+                  
+                    </div>
+                </div>
+                <button class="btn-auth" style="background: #DE2666;" onclick="goBackStep()">Retour</button>
+            </div>
+
+            <div id="step-gopay" style="display:none; padding: 20px;">
+                <div style="background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 1px solid var(--border-color);">
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <i class="fas fa-coins" style="font-size: 35px; color: #DE2666;"></i>
+                        <h3 style="margin: 5px 0 0 0; font-size: 14px; color: #DE8F9A; text-transform: uppercase;">GOPAY</h3>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-dim); text-align: center; margin-bottom: 15px; line-height: 1.5;">
+                        Veuillez remplir votre mode de paiement et le compte de paiement réel que vous utiliserez pour effectuer le paiement.
+                    </p>
+                    <p style="font-size: 15px; font-weight: bold; text-align: center; margin-bottom: 25px; color: var(--text-main);">
+                        Montant de paiement: <span style="color: #DED155;">XOF <span id="gopay-amount-val">0</span></span>
+                    </p>
+                    <p style="font-size: 13px; font-weight: bold; margin-bottom: 10px; color: var(--text-main);">Veuillez sélectionner un mode de paiement</p>
+                    
+                    <div id="gopay-operators" style="display: flex; gap: 15px; margin-bottom: 20px; justify-content: center; flex-wrap: wrap;">
+                        </div>
+
+                    <div class="gopay-input-box" style="background: #98369D; border-color: #A23939;">
+                        <span id="gopay-prefix" style="color: #31309D;">+226</span>
+                        <input type="tel" id="gopay-phone" placeholder="Veuillez saisir votre N° d'envoi" style="color: white;">
+                    </div>
+                    <div style="background-color: #DE2666; color: #31309D; padding: 12px; border-radius: 8px; font-size: 11px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4; border: 1px solid #f39c12;">
+                        <i class="fas fa-exclamation-circle" style="margin-top: 2px;"></i> 
+                        <span>Veuillez remplir votre compte de paiement avec précision. Un remplissage incorrect peut entraîner la perte des fonds transférés.</span>
+                    </div>
+
+                    <button class="gopay-submit" style="background: #98369D; color: #A23939;" onclick="goToPaymentDetails()">Confirmer →</button>
+                </div>
+                <button class="btn-auth" style="background: #31309D; margin-top: 15px;" onclick="goBackStep()">Retour</button>
+            </div>
+
+            <div id="step-gopay-details" style="display:none; background: var(--bg); min-height: 100vh;">
+                <div style="background: #DED155; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-coins" style="color: #64E6E9; font-size: 18px;"></i>
+                        <span style="font-weight: bold; font-size: 14px; color: #DED155; text-transform: uppercase;">GOPAY</span>
+                    </div>
+                    <div style="font-size: 11px; opacity: 0.9;">
+                        Expiration <span id="payment-timer" style="background: rgba(255,255,255,0.1); padding: 3px 6px; border-radius: 4px; margin-left: 5px; font-weight: bold; font-family: monospace;">15:00</span>
+                    </div>
+                </div>
+
+                <div style="padding: 20px;">
+                    <div style="background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <i class="fas fa-credit-card" style="color: var(--text-dim); font-size: 20px;"></i>
+                            <h3 style="margin: 0; font-size: 16px; color: var(--text-main);">Copiez ce compte</h3>
+                        </div>
+                        <p style="font-size: 13px; color: var(--text-dim); margin-top: 0; margin-bottom: 20px;">Copiez ce compte <b id="detail-op-name" style="color: #f39c12; text-transform: uppercase;">...</b> et effectuez le paiement</p>
+
+                        <div style="background: #64E6E9; border-radius: 12px; padding: 15px; margin-bottom: 20px; border: 1px solid #31309D;">
+                            <p style="margin: 0 0 5px 0; font-size: 12px; color: var(--text-dim);">Montant total payable:</p>
+                            <p style="margin: 0 0 15px 0; font-size: 22px; font-weight: bold; color: #98369D;">XOF <span id="detail-amount">0</span></p>
+
+                            <p style="margin: 0 0 5px 0; font-size: 12px; color: var(--text-dim);"><span id="detail-op-label">...</span> Compte:</p>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <span id="detail-receiver-phone" style="font-size: 20px; font-weight: bold; color: #31309D;">...</span>
+                                <i class="fas fa-copy" style="color: var(--text-dim); font-size: 20px; cursor: pointer;" onclick="copyTextFromId('detail-receiver-phone')"></i>
+                            </div>
+
+                            <p style="margin: 0 0 5px 0; font-size: 12px; color: var(--text-dim);">Nom du compte:</p>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span id="detail-receiver-name" style="font-size: 18px; font-weight: bold; color: #DE2666;">...</span>
+                                <i class="fas fa-copy" style="color: var(--text-dim); font-size: 20px; cursor: pointer;" onclick="copyTextFromId('detail-receiver-name')"></i>
+                            </div>
+                        </div>
+
+                        <button class="gopay-submit" id="execute-pay-btn" style="background: #98369D; color: #A23939;" onclick="executePayment()">Cliquez pour payer</button>
+
+                        <div id="ussd-container" style="text-align: center; margin-top: 15px; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 10px;">
+                            <span id="detail-ussd" style="color: #DE8F9A; font-weight: bold; font-size: 15px;">...</span>
+                            <i class="fas fa-copy" style="color: var(--text-dim); font-size: 18px; cursor: pointer;" onclick="copyTextFromId('detail-ussd')"></i>
+                        </div>
+
+                        <hr style="border: 0; border-top: 1px dashed ##333; margin: 20px 0;">
+
+                        <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px;">
+                            <i class="fas fa-sync" style="color: var(--text-dim); margin-top: 3px; font-size: 18px;"></i>
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 5px 0; font-size: 15px; color: var(--text-main);">Paiement achevé?</h4>
+                                <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--text-dim);">Cliquez sur <b style="color: #A23939;">"Rafraîchir"</b> pour vérifier s'il réussit</p>
+                                
+                                <div style="background: #DE2666; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333;">
+                                    <div>
+                                        <span style="font-size: 11px; color: var(--text-dim); display: block;">Montant payé:</span>
+                                        <span style="font-size: 18px; font-weight: bold; color: #A23939;">XOF 0</span>
+                                    </div>
+                                    <button style="background: #DE8F9A; color: #31309D; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 13px; cursor: pointer;" onclick="refreshPayment()">Rafraîchir</button>
+                                </div>
+                                <p style="font-size: 10px; color: #64E6E9; margin-top: 8px; line-height: 1.4;">Le paiement devrait réussir dans 2 à 10 minutes. Cliquez pour actualiser les résultats.</p>
+                            </div>
+                        </div>
+
+                        <hr style="border: 0; border-top: 1px dashed #DED155; margin: 20px 0;">
+
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <i class="fas fa-address-card" style="color: var(--text-dim); font-size: 20px;"></i>
+                            <div>
+                                <span style="font-size: 12px; color: var(--text-dim); display: block;">Votre compte de paiement (N° d'envoi):</span>
+                                <span id="detail-sender-phone" style="font-size: 16px; font-weight: bold; color: var(--text-main);">...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="withdraw-modal" style="background: var(--bg);">
+        <div class="modal-header" style="background: var(--nav-bg); border-bottom: 1px solid var(--border-color);">
+            <i class="fas fa-arrow-left" style="color: var(--text-main);" onclick="closeWithdrawModal()"></i>
+            <h2 style="font-size: 16px; color: var(--text-main);">Retirer de l'argent</h2>
+            <i class="fas fa-clipboard-list" style="margin-right: 0; color: var(--text-main);"></i>
+        </div>
+        <div class="modal-body" style="padding: 0; background: var(--bg);">
+            <div class="withdraw-banner" style="background: 31309D; border-bottom: 1px solid var(--border-color);">
+                <h2 style="color: var(--text-main);">FCFA <span id="withdraw-available-balance">0</span></h2>
+                <p style="color: var(--text-dim);">Solde du compte</p>
+            </div>
+            <div class="withdraw-form-container" style="background: var(--bg); border-bottom: 1px solid var(--border-color);">
+                <div class="wallet-select" id="wallet-select-btn" onclick="openWalletModal()" style="border-bottom: 1px solid var(--border-color); color: var(--text-main);">
+                    <div style="display:flex; align-items:center;">
+                        <i class="fas fa-credit-card" style="color: var(--text-main);"></i>
+                        <span id="wallet-display-text">Choisissez le compte portefeuille</span>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:#98369D;"></i>
+                </div>
+                <div class="withdraw-input-group">
+                    <label style="color: var(--text-main);">Montant du retrait</label>
+                    <div class="withdraw-input-wrapper" style="border-bottom: 1px solid var(--border-color);">
+                        <span style="color: var(--text-main);">FCFA</span>
+                        <input type="number" id="withdraw-amount-input" placeholder="Veuillez préciser le montant" oninput="calculateWithdrawal()" style="color: var(--text-main);">
+                    </div>
+                </div>
+                <div class="withdraw-calc">
+                    <span style="color: var(--text-dim);">Montant reçu: FCFA <span id="withdraw-received-amount" style="color:var(--text-main);">0.00</span></span>
+                    <span style="color: var(--text-dim);">Impôt: 18%</span>
+                </div>
+                <button class="withdraw-btn" onclick="submitWithdrawal()" style="background: #f39c12; color: #000;">Retrait instantané</button>
+            </div>
+            
+            <div class="withdraw-rules" style="background: var(--card-bg);">
+                <h4 style="color: var(--text-main);"><i class="fas fa-info-circle" style="color:FF2FF0; margin-right:5px;"></i> Règles de retrait</h4>
+                <p style="color: var(--text-dim);">1. Le montant minimum de retrait est fixé à <b>500 FCFA</b>.</p>
+                <p style="color: var(--text-dim);">2. Les demandes de retrait sont traitées tous les jours de <b>10h00 à 16h00</b>. Vous pouvez effectuer jusqu'à <b>2 retraits maximum par jour</b>.</p>
+                <p style="color: var(--text-dim);">3. Des frais de gestion de <b>18%</b> sont appliqués sur chaque retrait afin de couvrir les frais de transaction du réseau et la maintenance de la plateforme.</p>
+                <p style="color:#31309D; font-weight:bold; margin-top:10px;">⚠️ L'achat d'un produit VIP est obligatoire pour débloquer les retraits.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="wallet-modal" style="background: var(--bg); z-index: 2005;">
+        <div class="modal-header" style="background: var(--nav-bg); border-bottom: 1px solid var(--border-color);">
+            <i class="fas fa-arrow-left" style="color: var(--text-main);" onclick="closeWalletModal()"></i>
+            <h2 style="font-size: 16px; color: var(--text-main);">Lier un compte</h2>
+            <i class="fas fa-save" style="margin-right: 0; color: var(--text-main);"></i>
+        </div>
+        <div class="modal-body" style="background: var(--bg);">
+            <div class="auth-card" style="margin-top: 10px; background: var(--card-bg); border: 1px solid var(--border-color);">
+                <div class="input-group">
+                    <label style="color: var(--text-dim);">Nom complet</label>
+                    <input type="text" id="wallet-name" placeholder="Votre nom sur le compte">
+                </div>
+                <div class="input-group">
+                    <label style="color: var(--text-dim);">Mode de paiement</label>
+                    <select id="wallet-method">
+                        <option value="Orange Money">Orange Money</option>
+                        <option value="Moov Money">Moov Money</option>
+                        <option value="Wave">Wave</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label style="color: var(--text-dim);">Numéro de téléphone</label>
+                    <input type="tel" id="wallet-phone" placeholder="Numéro de votre compte">
+                </div>
+                <button class="btn-auth" style="background: FF2FF0; color:FF50E6;" onclick="saveWallet()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="service-modal" style="background: var(--bg); z-index: 2005;">
+        <div class="modal-header" style="background: var(--nav-bg); border-bottom: 1px solid var(--border-color);">
+            <i class="fas fa-arrow-left" style="color: var(--text-main);" onclick="closeServiceModal()"></i>
+            <h2 style="font-size: 16px; color: var(--text-main);">Service Client</h2>
+            <i class="fas fa-headset" style="margin-right: 0; color: var(--text-main);"></i>
+        </div>
+        <div class="modal-body" style="background: var(--bg);">
+            <div class="auth-card" style="margin-top: 10px; padding: 15px; background: var(--card-bg); border: 1px solid var(--border-color);">
+                <p style="font-size: 13px; color: var(--text-dim); text-align: center; margin-bottom: 20px;">
+                    Rejoignez notre communauté ou contactez l'assistance 24/7 sur Telegram.
+                </p>
+                <div class="method-card" onclick="window.location.href='https://t.me/Skillslabgroupe'" style="background: #111; border-color: #333;">
+                    <i class="fab fa-telegram" style="font-size: 30px; color: #64E6E9; margin-right: 15px;"></i>
+                    <div style="flex:1;">
+                        <span style="display:block; font-weight: bold; color: var(--text-main); font-size: 15px;">Groupe Telegram</span>
+                        <span style="display:block; font-size: 11px; color: var(--text-dim); margin-top: 3px;">Rejoignez la discussion</span>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color: #DED155;"></i>
+                </div>
+                <div class="method-card" onclick="window.location.href='https://t.me/chaineofficieldeskillslab'" style="background: #111; border-color: #333;">
+                    <i class="fab fa-telegram" style="font-size: 30px; color: #DE8F9A; margin-right: 15px;"></i>
+                    <div style="flex:1;">
+                        <span style="display:block; font-weight: bold; color: var(--text-main); font-size: 15px;">Chaîne Telegram</span>
+                        <span style="display:block; font-size: 11px; color: var(--text-dim); margin-top: 3px;">Suivez nos annonces</span>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color: #64E6E9;"></i>
+                </div>
+                <div class="method-card" onclick="window.location.href='@sserviceclientSkillsLab'" style="background: #111; border-color: #333;">
+                    <i class="fas fa-user-tie" style="font-size: 30px; color: #DE8F9A; margin-right: 15px;"></i>
+                    <div style="flex:1;">
+                        <span style="display:block; font-weight: bold; color: var(--text-main); font-size: 15px;">Assistance Rapide</span>
+                        <span style="display:block; font-size: 11px; color: var(--text-dim); margin-top: 3px;">Contact direct</span>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color: #DED155;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="bonus-modal" style="background: var(--bg); z-index: 2005;">
+        <div class="modal-header" style="background: var(--nav-bg); border-bottom: 1px solid var(--border-color);">
+            <i class="fas fa-arrow-left" style="color: var(--text-main);" onclick="closeBonusModal()"></i>
+            <h2 style="font-size: 16px; color: var(--text-main);">Bonus</h2>
+            <i class="fas fa-gift" style="margin-right: 0; color: var(--text-main);"></i>
+        </div>
+        <div class="modal-body" style="background: var(--bg);">
+            <div class="auth-card" style="margin-top: 10px; background: var(--card-bg); border: 1px solid var(--border-color);">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <i class="fas fa-gift" style="font-size: 50px; color: #64E6E9; margin-bottom: 11px;"></i>
+                    <p style="font-size: 13px; color: var(--text-dim);">Veuillez entrer votre code de récompense pour recevoir votre bonus.</p>
+                </div>
+                <div class="input-group">
+                    <label style="color: var(--text-dim);">Code Bonus échange</label>
+                    <input type="text" id="bonus-code-input" placeholder="Entrez le code ici">
+                </div>
+                <button class="btn-auth" style="background: #DE2666; color: #0000;" onclick="submitUserBonus()">Valider le code</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="password-modal" style="background: var(--bg); z-index: 2005;">
+        <div class="modal-header" style="background: var(--nav-bg); border-bottom: 1px solid var(--border-color);">
+            <i class="fas fa-arrow-left" style="color: var(--text-main);" onclick="closePasswordModal()"></i>
+            <h2 style="font-size: 16px; color: var(--text-main);">Modifier mot de passe</h2>
+            <i class="fas fa-lock" style="margin-right: 0; color: var(--text-main);"></i>
+        </div>
+        <div class="modal-body" style="background: var(--bg);">
+            <div class="auth-card" style="margin-top: 10px; background: var(--card-bg); border: 1px solid var(--border-color);">
+                <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 15px; text-align: center;">Sécurisez votre compte en mettant à jour votre mot de passe.</p>
+                <div class="input-group">
+                    <label style="color: var(--text-dim);">Nouveau mot de passe</label>
+                    <input type="password" id="new-password" placeholder="Nouveau mot de passe">
+                </div>
+                <div class="input-group">
+                    <label style="color: var(--text-dim);">Confirmer le mot de passe</label>
+                    <input type="password" id="confirm-new-password" placeholder="Répétez le mot de passe">
+                </div>
+                <button class="btn-auth" style="background: #A2A14F; color: #000;" onclick="updatePassword()">Mettre à jour</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="history-modal" style="background: var(--bg); z-index: 2005;">
+        <div class="modal-header" style="background: var(--nav-bg); border-bottom: 1px solid var(--border-color);">
+            <i class="fas fa-arrow-left" style="color: var(--text-main);" onclick="closeHistoryModal()"></i>
+            <h2 style="font-size: 16px; color: var(--text-main);">Histoire de retrait</h2>
+            <i class="fas fa-history" style="margin-right: 0; color: var(--text-main);"></i>
+        </div>
+        <div class="modal-body" id="history-withdraw-list" style="background: var(--bg);">
+            <div style="text-align: center; margin-top: 80px; color: #DE8F9A;">
+                <i class="fas fa-box-open" style="font-size: 60px; margin-bottom: 15px; opacity: 0.3;"></i>
+                <p style="font-size: 14px; font-weight: bold;">Chargement...</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="recharge-history-modal" style="background: var(--bg); z-index: 2005;">
+        <div class="modal-header" style="background: var(--nav-bg); border-bottom: 1px solid var(--border-color);">
+            <i class="fas fa-arrow-left" style="color: var(--text-main);" onclick="closeRechargeHistoryModal()"></i>
+            <h2 style="font-size: 16px; color: var(--text-main);">Histoire des recharges</h2>
+            <i class="fas fa-file-invoice-dollar" style="margin-right: 0; color: var(--text-main);"></i>
+        </div>
+        <div class="modal-body" id="history-recharge-list" style="background: var(--bg);">
+            <div style="text-align: center; margin-top: 80px; color: #DE8F9A;">
+                <i class="fas fa-box-open" style="font-size: 60px; margin-bottom: 15px; opacity: 0.3;"></i>
+                <p style="font-size: 14px; font-weight: bold;">Chargement...</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="my-products-modal" style="background: var(--bg); z-index: 2005;">
+        <div class="modal-header" style="background: var(--nav-bg); border-bottom: 1px solid var(--border-color);">
+            <i class="fas fa-arrow-left" style="color: var(--text-main);" onclick="closeMyProductsModal()"></i>
+            <h2 style="font-size: 16px; color: var(--text-main);">Mes VIP acheter</h2>
+            <i class="fas fa-shopping-bag" style="margin-right: 0; color: var(--text-main);"></i>
+        </div>
+        <div class="modal-body" id="my-products-list" style="padding: 16px; background: var(--bg);">
+            <div style="text-align: center; margin-top: 80px; color: #DE2666;">
+                <i class="fas fa-box-open" style="font-size: 60px; margin-bottom: 15px; opacity: 0.3;"></i>
+                <p style="font-size: 14px; font-weight: bold;">Chargement de vos commandes...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="rules-modal" style="background: var(--bg); z-index: 2005;">
+        <div class="modal-header" style="background: var(--nav-bg); border-bottom: 1px solid var(--border-color);">
+            <i class="fas fa-arrow-left" style="color: var(--text-main);" onclick="closeRulesModal()"></i>
+            <h2 style="font-size: 16px; color: var(--text-main);">Règles de plateforme</h2>
+            <i class="fas fa-shield-alt" style="margin-right: 0; color: var(--text-main);"></i>
+        </div>
+        <div class="modal-body" style="background: var(--bg);">
+            <div class="auth-card" style="margin-top: 10px; text-align: left; padding: 15px; background: var(--card-bg); border: 1px solid var(--border-color);">
+                <h3 style="color:#DE8F9A; font-size:15px; margin-top:0;">1. Utilisation du compte</h3>
+                <p style="font-size:12px; color:var(--text-dim); line-height: 1.5;">La création de plusieurs comptes par une même personne est strictement interdite. Tout compte multiple créé pour abuser du système sera bloqué définitivement.</p>
+                <h3 style="color:#31309D; font-size:15px;">2. Modalités de retrait</h3>
+                <p style="font-size:12px; color:var(--text-dim); line-height: 1.5;">Les retraits s'effectuent tous les jours de 10h à 16h. Limite de 2 retraits/jour, avec un minimum de 1 000 FCFA par demande.</p>
+                <h3 style="color:#64E6E9; font-size:15px;">3. Frais de gestion</h3>
+                <p style="font-size:12px; color:var(--text-dim); line-height: 1.5;">Des frais de 18% sont prélevés lors de chaque retrait pour la gestion réseau et la sécurité des transactions.</p>
+                <h3 style="color:#DED155; font-size:15px;">4. Sécurité</h3>
+                <p style="font-size:12px; color:var(--text-dim); line-height: 1.5;">Le personnel ​Skills Lab ne vous demandera jamais vos codes confidentiels. Veuillez garder vos informations personnelles en sécurité.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="about-modal" style="background: var(--bg); z-index: 2005;">
+        <div class="modal-header" style="background: var(--nav-bg); border-bottom: 1px solid var(--border-color);">
+            <i class="fas fa-arrow-left" style="color: var(--text-main);" onclick="closeAboutModal()"></i>
+            <h2 style="font-size: 16px; color: var(--text-main);">À propos de nous</h2>
+            <i class="fas fa-info-circle" style="margin-right: 0; color: var(--text-main);"></i>
+        </div>
+        <div class="modal-body" style="background: var(--bg);">
+            <div class="auth-card" style="margin-top: 10px; text-align: center; background: var(--card-bg); border: 1px solid var(--border-color);">
+                <h1 style="color:#DED155; margin: 10px 0; font-size: 35px; font-weight: 900;">​Skills Lab</h1>
+                <p style="font-size: 12px; color: #666; margin-bottom: 20px;">Version 1.0.0</p>
+                <p style="font-size:13px; color:var(--text-dim); text-align: left; line-height: 1.6;">
+                    <b>​Skills Lab</b> est une plateforme leader dans la gestion de patrimoine numérique. Notre objectif principal est d'aider nos utilisateurs à atteindre une stabilité financière grâce à des produits d'investissement accessibles à tous.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="download-modal" style="background: var(--bg); z-index: 2005;">
+        <div class="modal-header" style="background: var(--nav-bg); border-bottom: 1px solid var(--border-color);">
+            <i class="fas fa-arrow-left" style="color: var(--text-main);" onclick="closeDownloadModal()"></i>
+            <h2 style="font-size: 16px; color: var(--text-main);">Télécharger l'application</h2>
+            <i class="fas fa-download" style="margin-right: 0; color: var(--text-main);"></i>
+        </div>
+        <div class="modal-body" style="background: var(--bg);">
+            <div class="auth-card" style="margin-top: 50px; text-align: center; background: var(--card-bg); border: 1px solid var(--border-color);">
+                <i class="fab fa-android" style="font-size: 80px; color: #3DDC84; margin-bottom: 15px;"></i>
+                <h3 style="margin-top:0; color: var(--text-main);">Application Android (APK)</h3>
+                <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 30px; line-height: 1.5;">Téléchargez notre application officielle pour une meilleure expérience utilisateur.</p>
+                <button class="btn-auth" style="background: 2836FF; color: #31309D;" onclick="window.location.href='https://apk.e-droid.net/apk/app3997728-931xpr.apk?v=7'">Télécharger l'APK</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="team-detail-modal" style="background: var(--bg); z-index: 2005;">
+        <div class="modal-header" style="background: var(--nav-bg); border-bottom: 1px solid var(--border-color);">
+            <i class="fas fa-arrow-left" style="color: var(--text-main);" onclick="closeTeamDetailModal()"></i>
+            <h2 style="font-size: 16px; color: var(--text-main);">Mon équipe</h2>
+            <div style="width: 24px;"></div>
+        </div>
+        <div class="team-detail-tabs" style="background: var(--card-bg); border-bottom: 1px solid var(--border-color);">
+            <div class="team-detail-tab active" onclick="switchTeamTab('A', this)" style="color: var(--text-dim);">
+                <span class="team-detail-tab-val" id="tab-lvl1-recharge" style="color:FF50E6;">0 F</span>
+                <span class="team-detail-tab-level" id="tab-lvl1-count">Niv A (0)</span>
+            </div>
+            <div class="team-detail-tab" onclick="switchTeamTab('B', this)" style="color: var(--text-dim);">
+                <span class="team-detail-tab-val" id="tab-lvl2-recharge" style="color:FF2FF0;">0 F</span>
+                <span class="team-detail-tab-level" id="tab-lvl2-count">Niv B (0)</span>
+            </div>
+            <div class="team-detail-tab" onclick="switchTeamTab('C', this)" style="color: var(--text-dim);">
+                <span class="team-detail-tab-val" id="tab-lvl3-recharge" style="color:#98369D;">0 F</span>
+                <span class="team-detail-tab-level" id="tab-lvl3-count">Niv C (0)</span>
+            </div>
+        </div>
+        <div class="team-list-container" id="team-list-content" style="background: var(--bg); overflow-y: auto; padding-bottom: 30px;">
+            <div class="no-more-data" style="color: #31309D;">Plus aucune donnée</div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="admin-modal" style="background: var(--bg); z-index: 2005;">
+        <div class="modal-header" style="background: #111; color: white; padding:15px; border-bottom: 1px solid #333;">
+            <i class="fas fa-arrow-left" style="color: white; margin-right: 15px;" onclick="closeAdminModal()"></i>
+            <h2 style="font-size: 16px; color: #f39c12; margin:0; flex:1; text-align:center;">Administration</h2>
+            <i class="fas fa-user-shield" style="margin-right: 0; color: #f39c12; margin-left: 15px;"></i>
+        </div>
+        
+        <div class="admin-tabs" style="background: #111;">
+            <div class="admin-tab active" id="tab-admin-users" onclick="switchAdminTab('admin-users', this)">Utilisateurs</div>
+            <div class="admin-tab" id="tab-admin-dep-pending" onclick="switchAdminTab('admin-dep-pending', this)">Dépôts (Att)</div>
+            <div class="admin-tab" id="tab-admin-dep-confirmed" onclick="switchAdminTab('admin-dep-confirmed', this)">Dépôts (OK)</div>
+            <div class="admin-tab" id="tab-admin-withdraw" onclick="switchAdminTab('admin-withdraw', this)">Retraits</div>
+            <div class="admin-tab" id="tab-admin-bonus" onclick="switchAdminTab('admin-bonus', this)">Bonus</div>
+        </div>
+
+        <div class="modal-body" style="padding: 10px; background: var(--bg);">
+            <div id="admin-users" class="admin-content-section active">
+                <div style="background: #111; padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 15px; border: 1px solid #333;">
+                    <h3 style="margin: 0; color: #aaa; font-size: 14px;">Total Utilisateurs</h3>
+                    <h1 style="margin: 5px 0 0 0; color: #f39c12; font-size: 32px;" id="admin-total-users">0</h1>
+                </div>
+                <input type="text" id="search-users" class="admin-search-bar" placeholder="🔍 Rechercher un numéro..." onkeyup="filterAdminCards('search-users', 'admin-list-users')" style="background: #222; color: white; border: 1px solid #333;">
+                <div id="admin-list-users">
+                    <div style="text-align:center; padding:15px; color: #888;">Chargement...</div>
+                </div>
+            </div>
+
+            <div id="admin-dep-pending" class="admin-content-section">
+                <input type="text" id="search-dep-pending" class="admin-search-bar" placeholder="🔍 Rechercher un numéro..." onkeyup="filterAdminCards('search-dep-pending', 'admin-list-dep-pending')" style="background: #222; color: white; border: 1px solid #333;">
+                <div id="admin-list-dep-pending">
+                    <div style="text-align:ce
+                   nter; padding:15px; color: #888;">Chargement...</div>
+                </div>
+            </div>
+
+            <div id="admin-dep-confirmed" class="admin-content-section">
+                <input type="text" id="search-dep-confirmed" class="admin-search-bar" placeholder="🔍 Rechercher un numéro..." onkeyup="filterAdminCards('search-dep-confirmed', 'admin-list-dep-confirmed')" style="background: #222; color: white; border: 1px solid #333;">
+                <div id="admin-list-dep-confirmed">
+                    <div style="text-align:center; padding:15px; color: #888;">Chargement...</div>
+                </div>
+            </div>
+
+            <div id="admin-withdraw" class="admin-content-section">
+                <input type="text" id="search-withdraw" class="admin-search-bar" placeholder="🔍 Rechercher un numéro..." onkeyup="filterAdminCards('search-withdraw', 'admin-list-withdraw')" style="background: #222; color: white; border: 1px solid #333;">
+                <div id="admin-list-withdraw">
+                    <div style="text-align:center; padding:15px; color: #888;">Chargement...</div>
+                </div>
+            </div>
+
+            <div id="admin-bonus" class="admin-content-section">
+                <div class="auth-card" style="margin-top: 0; padding:15px; background: var(--card-bg); border: 1px solid var(--border-color);">
+                    <h3 style="margin-top:0; color:#f39c12; font-size:15px;">Créer un code promo</h3>
+                    <p style="font-size:11px; color:var(--text-dim); margin-bottom:15px;">Ce code pourra être utilisé par les membres dans la section Bonus.</p>
+                    <div class="input-group">
+                        <label>Nom du Code (ex: CADEAU2026)</label>
+                        <input type="text" id="admin-bonus-name" placeholder="Tapez le code en majuscules" style="background: #222; color: white; border-color: #333;">
+                    </div>
+                    <div class="input-group">
+                        <label>Montant à offrir (FCFA)</label>
+                        <input type="number" id="admin-bonus-amount" placeholder="Ex: 5000" style="background: #222; color: white; border-color: #333;">
+                    </div>
+                    <div class="input-group">
+                        <label>Nombre max d'utilisations</label>
+                        <input type="number" id="admin-bonus-limit" placeholder="Ex: 100" value="100" style="background: #222; color: white; border-color: #333;">
+                    </div>
+                    <button class="btn-auth" style="background: #f39c12; color: #000;" onclick="adminGenerateBonus()">Générer le code</button>
+                </div>
+                
+                <div style="background: var(--card-bg); border-radius: 12px; padding: 16px; border: 1px solid var(--border-color); margin-top:15px; overflow-x:auto;">
+                    <h4 style="margin-top:0; font-size:13px; color:var(--text-main);">Codes Actifs</h4>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; color: var(--text-main);">
+                        <thead style="background:FF2FF0; color: white;">
+                            <tr><th style="padding:8px;">Code</th><th style="padding:8px;">Valeur</th><th style="padding:8px;">Restant</th><th style="padding:8px;">Action</th></tr>
+                        </thead>
+                        <tbody id="admin-table-bonuses">
+                            <tr><td colspan="4" style="padding:10px;">Chargement...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="register-page" class="page active">
+        <div class="auth-container">
+            <h1 style="color:#f39c12; margin-bottom: 5px;">Skills Lab</h1>
+            <p id="auth-title" style="color: var(--text-dim); font-size: 14px; margin-bottom: 25px;">Rejoignez le futur de l'investissement</p>
+            <div class="auth-card" id="auth-card">
+                <div class="input-group">
+                    <label>Numéro de téléphone</label>
+                    <div class="custom-select-wrapper">
+                        <div class="country-selector" onclick="toggleCountryMenu()">
+                            <span id="selected-flag">🇧🇫</span>
+                            <span id="selected-code" style="color: var(--text-main);">+226</span>
+                            <i class="fas fa-chevron-down" style="font-size: 10px; color: var(--text-main);"></i>
+                        </div>
+                        <div class="country-options" id="country-menu">
+                            <div class="option" onclick="selectCountry('🇧🇫', '+226')">🇧🇫 Burkina (+226)</div>
+                            <div class="option" onclick="selectCountry('🇨🇮', '+225')">🇨🇮 Côte d'Ivoire (+225)</div>
+                            <div class="option" onclick="selectCountry('🇲🇱', '+223')">🇲🇱 Mali (+223)</div>
+                        <div class="option" onclick="selectCountry('🇨🇲', '+237')">🇨🇲 Cameroun (+237)</div>
+                        
+                        </div>
+                        <input type="tel" id="reg-phone" class="phone-input-field" placeholder="Numéro" style="background: #A23939; color: var(--text-main);">
+                    </div>
+                </div>
+                <div class="input-group"><label>Mot de passe</label><input type="password" id="reg-pass" placeholder="Votre mot de passe"></div>
+                <div class="input-group only-register"><label>Confirmer le mot de passe</label><input type="password" id="reg-pass-confirm" placeholder="Répéter le mot de passe"></div>
+                <div class="input-group only-register"><label>Code de parrainage (Optionnel)</label><input type="text" id="reg-ref" placeholder="Ex: ACC2026"></div>
+                <button class="btn-auth" id="btn-submit" style="background: #f39c12; color: #98369D;" onclick="handleSubmit()">S'inscrire</button>
+                <p class="switch-mode" id="switch-mode-text" onclick="toggleAuthMode()" style="color: var(--text-dim);">Déjà membre ? <b style="color: var(--text-main);">Se connecter</b></p>
+                <p id="auth-msg" style="font-size: 12px; margin-top: 10px; color: #31309D;"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-dashboard" class="page">
+        <div class="header-logo">
+            <h1 style="color:#A2A14F;">​Skills Lab</h1>
+            <div id="dash-phone-display" style="display:none;"></div>
+        </div>
+        <div class="promo-banner" style="background: #31309D;">
+            <div class="promo-text">
+                <h2 style="color:#A23939;">Ravivez votre esprit d'investissement</h2>
+                <p style="color:#A2A14F; font-weight:bold;">Rien ne rend vos finances aussi stables et performantes que nous.</p>
+                <button class="promo-btn" style="color: #98369D;" onclick="openServiceModal()">Rejoignez-nous</button>
+            </div>
+            <img src="https://img.icons8.com/color/200/santa.png" class="promo-img" alt="promo">
+        </div>
+        <div class="action-bar">
+            <button class="action-btn btn-recharger" onclick="openRechargeModal()"><i class="fas fa-wallet"></i>Recharger</button>
+            <button class="action-btn btn-retirer" onclick="openWithdrawModal()"><i class="fas fa-hand-holding-usd"></i>Retirer</button>
+            <button class="action-btn btn-service" onclick="openServiceModal()"><i class="fas fa-headset"></i>Services</button>
+        </div>
+        
+        <div class="scrolling-news">
+            <i class="fas fa-bullhorn" style="color:#f39c12"></i>
+            <marquee id="dynamic-marquee" style="color:#f39c12;">Chargement des transactions récentes...</marquee>
+        </div>
+        
+        <div class="stats-container">
+            <div class="stat-card">
+                <h3 class="display-balance-val">0 FCFA</h3>
+                <p>Solde du compte</p>
+            </div>
+            <div class="stat-card">
+                <h3 class="display-revenue-val">0 FCFA</h3>
+                <p>Revenu cumulé</p>
+            </div>
+        </div>
+
+        <div style="padding: 0 15px; margin-bottom: 20px;">
+            <img src="https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?q=80&w=1000" style="width: 100%; height: 120px; object-fit: cover; border-radius: 15px; border: 1px solid var(--border-color);" alt="Bannière Solde">
+        </div>
+
+        <div style="padding: 0 15px; margin-bottom: 20px;">
+            <canvas id="hepuChart" style="background: var(--card-bg); border-radius: 15px; padding: 10px; border: 1px solid var(--border-color);"></canvas>
+        </div>
+
+        <div class="carousel-container">
+    <div class="carousel-track">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFD700" class="product-img" width="64" height="64" aria-label="Stars" role="img">
+  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path>
+     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="product-img" width="64" height="64" aria-label="Empty Star" role="img">
+  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFD700" width="64" height="64">
+  <path d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" stroke="#FFD700" stroke-width="1" stroke-linejoin="round"></path>
+    </div>
+</div>
+            </div>
+        </div>
+ 
+    <div id="product-page" class="page">
+        <h2 class="product-page-title">Tous les produits</h2>
+        
+        <div class="product-summary">
+            <div class="summary-col" onclick="openMyProductsModal()">
+                <span class="summary-val" id="total-my-products">0</span>
+                <span class="summary-label">Mes produits ></span>
+            </div>
+            <div class="summary-col">
+                <span class="summary-val display-revenue-val">0 F</span>
+                <span class="summary-label">Revenu total cumulé></span>
+            </div>
+        </div>
+
+        <div class="product-card">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFD700" class="product-img" width="64" height="64" aria-label="Stars" role="img">
+  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"></path>
+</svg>
+
+            <div class="product-info">
+                <h3 class="product-title">etoile 1</h3>
+                <p class="product-detail">Prix : <span class="product-val">FCFA 3,000</span></p>
+                <p class="product-detail">Jours de revenus : 180</p>
+                <p class="product-detail">Revenu quotidien : <span class="product-val">FCFA 500</span></p>
+                <p class="product-detail">Revenu total : <span class="product-val">FCFA 90,000</span></p>
+            </div>
+            <button class="btn-buy" onclick="confirmPurchase('etoile1', 3000, 500, 180)">ACHETER</button>
+        </div>
+
+        <div class="product-card">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="product-img" width="64" height="64" aria-label="Empty Star" role="img">
+  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+</svg>
+
+            <div class="product-info">
+                <h3 class="product-title">étoile2</h3>
+                <p class="product-detail">Prix : <span class="product-val">FCFA 6,000</span></p>
+                <p class="product-detail">Jours de revenus : 180</p>
+                <p class="product-detail">Revenu quotidien : <span class="product-val">FCFA 1,000</span></p>
+                <p class="product-detail">Revenu total : <span class="product-val">FCFA 180,000</span></p>
+            </div>
+            <button class="btn-buy" onclick="confirmPurchase('etoile2', 6000, 1000, 180)">ACHETER</button>
+        </div>
+        
+        <div class="product-card">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFD700" width="64" height="64">
+  <path d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" stroke="#FFD700" stroke-width="1" stroke-linejoin="round"></path>
+</svg>
+
+            <div class="product-info">
+                <h3 class="product-title">étoiles3</h3>
+                <p class="product-detail">Prix : <span class="product-val">FCFA 12,000</span></p>
+                <p class="product-detail">Jours de revenus : 180</p>
+                <p class="product-detail">Revenu quotidien : <span class="product-val">FCFA 2,100</span></p>
+                <p class="product-detail">Revenu total : <span class="product-val">FCFA 378,000</span></p>
+            </div>
+            <button class="btn-buy" onclick="confirmPurchase('etoile3', 12000, 2100, 180)">ACHETER</button>
+        </div>
+
+        <div class="product-card">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5" width="64" height="64">
+  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" ></path>
+</svg>
+
+            <div class="product-info">
+                <h3 class="product-title">étoiles 4</h2>
+                <p class="product-detail">Prix : <span class="product-val">FCFA 25,000</span></p>
+                <p class="product-detail">Jours de revenus : 180</p>
+                <p class="product-detail">Revenu quotidien : <span class="product-val">FCFA 4,600</span></p>
+                <p class="product-detail">Revenu total : <span class="product-val">FCFA 828,000</span></p>
+            </div>
+            <button class="btn-buy" onclick="confirmPurchase('etoiles4', 25000, 4600, 180)">ACHETER</button>
+        </div>
+
+        <div class="product-card">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64">
+  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#FFD700" stroke="#000" stroke-width="0.5"></path>
+</svg>
+
+            <div class="product-info">
+                <h3 class="product-title">étoiles VIP1</h3>
+                <p class="product-detail">Prix : <span class="product-val">FCFA 50,000</span></p>
+                <p class="product-detail">Jours de revenus : 180</p>
+                <p class="product-detail">Revenu quotidien : <span class="product-val">FCFA 10,000</span></p>
+                <p class="product-detail">Revenu total : <span class="product-val">FCFA 1,800,000</span></p>
+            </div>
+            <button class="btn-buy" onclick="confirmPurchase('etoiles VIP1', 50000, 10000, 180)">ACHETER</button>
+        </div>
+
+        <div class="product-card">
+           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64">
+  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#FFD700" stroke="#000" stroke-width="0.5"></path>
+</svg>
+
+            <div class="product-info">
+                <h3 class="product-title">étoiles VIP2</h3>
+                <p class="product-detail">Prix : <span class="product-val">FCFA 100,000</span></p>
+                <p class="product-detail">Jours de revenus : 180</p>
+                <p class="product-detail">Revenu quotidien : <span class="product-val">FCFA 21,000</span></p>
+                <p class="product-detail">Revenu total : <span class="product-val">FCFA 3,780,000</span></p>
+            </div>
+            <button class="btn-buy btn-disabled" onclick="customAlert('Ce produit n\'est pas encore ouvert.')">NON OUVERT</button>
+        </div>
+
+        <div class="product-card">
+       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64">
+  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#FFD700" stroke="#000" stroke-width="0.5"></path>
+</svg>
+
+            <div class="product-info">
+                <h3 class="product-title">étoiles VIP3</h3>
+                <p class="product-detail">Prix : <span class="product-val">FCFA 200,000</span></p>
+                <p class="product-detail">Jours de revenus : 180</p>
+                <p class="product-detail">Revenu quotidien : <span class="product-val">FCFA 45,000</span></p>
+                <p class="product-detail">Revenu total : <span class="product-val">FCFA 8,100,000</span></p>
+            </div>
+            <button class="btn-buy btn-disabled" onclick="customAlert('Ce produit n\'est pas encore ouvert.')">NON OUVERT</button>
+        </div>
+
+        <div class="product-card">
+       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64">
+  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#FFD700" stroke="#000" stroke-width="0.5"></path>
+</svg>
+
+            <div class="product-info">
+                <h3 class="product-title">étoiles VIP4
+              </h3>
+                <p class="product-detail">Prix : <span class="product-val">FCFA 380,000</span></p>
+                <p class="product-detail">Jours de revenus : 180</p>
+                <p class="product-detail">Revenu quotidien : <span class="product-val">FCFA 85,000</span></p>
+                <p class="product-detail">Revenu total : <span class="product-val">FCFA 15,300,000</span></p>
+            </div>
+            <button class="btn-buy btn-disabled" onclick="customAlert('Ce produit n\'est pas encore ouvert.')">NON OUVERT</button>
+        </div>
+
+        <div class="product-card">
+           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64">
+  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#FFD700" stroke="#000" stroke-width="0.5"></path>
+</svg>
+
+            <div class="product-info">
+                <h3 class="product-title">étoiles VIP5</h3>
+                <p class="product-detail">Prix : <span class="product-val">FCFA 580,000</span></p>
+                <p class="product-detail">Jours de revenus : 180</p>
+                <p class="product-detail">Revenu quotidien : <span class="product-val">FCFA 150,000</span></p>
+                <p class="product-detail">Revenu total : <span class="product-val">FCFA 27,000,000</span></p>
+            </div>
+            <button class="btn-buy btn-disabled" onclick="customAlert('Ce produit n\'est pas encore ouvert.')">NON OUVERT</button>
+        </div>
+
+        <div class="product-card" style="margin-bottom: 30px;">
+           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64">
+  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#FFD700" stroke="#000" stroke-width="0.5"></path>
+</svg>
+
+            <div class="product-info">
+                <h3 class="product-title">étoiles VIP6</h3>
+                <p class="product-detail">Prix : <span class="product-val">FCFA 980,000</span></p>
+                <p class="product-detail">Jours de revenus : 180</p>
+                <p class="product-detail">Revenu quotidien : <span class="product-val">FCFA 280,000</span></p>
+                <p class="product-detail">Revenu total : <span class="product-val">FCFA 50,400,000</span></p>
+            </div>
+            <button class="btn-buy btn-disabled" onclick="customAlert('Ce produit n\'est pas encore ouvert.')">NON OUVERT</button>
+        </div>
+    </div>
+
+    <div id="team-page" class="page">
+        <div class="team-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin:0; font-size:18px; color: #6A6922;">Mon Équipe</h2>
+                <button style="background: rgba(0,0,0,0.5); color: white; border: none; padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight:bold; cursor: pointer;" onclick="openTeamDetailModal()">Mon équipe ></button>
+            </div>
+        </div>
+        
+        <div class="invite-box">
+            <div class="invite-row">
+                <div class="invite-info">
+                    <span id="my-invite-code">...</span>
+                    <small>Code d'invitation</small>
+                </div>
+                <button class="btn-copy-small" onclick="copyTextFromId('my-invite-code')">Copier le code</button>
+            </div>
+            <div class="invite-row">
+                <div class="invite-info">
+                    <span id="my-invite-link" style="font-size: 16px; font-weight: normal; color:var(--text-dim);">...</span>
+                    <small>Lien d'invitation</small>
+                </div>
+                <button class="btn-copy-small" onclick="copyTextFromId('my-invite-link')">Copier le lien</button>
+            </div>
+        </div>
+
+        <div class="team-table-container">
+            <table class="team-table">
+                <thead>
+                    <tr>
+                        <th>Niveau (Bonus)</th>
+                        <th>Invités</th>
+                        <th>Commission</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="text-align:left;">Niveau A <b>(26%)</b></td>
+                        <td id="lvl1-count-main">0</td>
+                        <td id="lvl1-recharge-main" style="color:#98369D; font-weight:bold;">0 F</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left;">Niveau B <b>(2%)</b></td>
+                        <td id="lvl2-count-main">0</td>
+                        <td id="lvl2-recharge-main" style="color:#A2A14F; font-weight:bold;">0 F</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align:left;">Niveau C <b>(1%)</b></td>
+                        <td id="lvl3-count-main">0</td>
+                        <td id="lvl3-recharge-main" style="color:#A23939; font-weight:bold;">0 F</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="team-summary">
+            <div class="summary-card">
+                <h4 id="total-invites-main">0</h5>
+                <p>Nombre d'invités</p>
+            </div>
+            <div class="summary-card">
+                <h4 id="total-team-rev-main">0 F</h4>
+                <p>Commissions Totales</p>
+            </div>
+        </div>
+
+        <div class="team-rules">
+            <h4 style="color:#A2A14F;"><i class="fas fa-hand-holding-usd" style="margin-right:5px;"></i> Récompenses d'invitation</h4>
+            <p>Développez votre équipe et gagnez des commissions sur le <b>premier achat VIP</b> de chaque nouveau membre.</p>
+            <p>1. <b>Niveau A (Direct) :</b> Vous gagnez <b>26%</b> du montant du premier achat VIP de vos filleuls directs.</p>
+            <p>2. <b>Niveau B (Indirect) :</b> Vous gagnez <b>2%</b> sur le premier achat VIP des filleuls de votre Niveau A.</p>
+            <p>3. <b>Niveau C (Sous-indirect) :</b> Vous gagnez <b>1%</b> sur le premier achat VIP des filleuls de votre Niveau B.</p>
+            <p style="color:#f39c12; font-weight:bold; margin-top:10px;">* Toutes les commissions sont ajoutées automatiquement à votre solde.</p>
+        </div>
+    </div>
+
+    <div id="profile-page" class="page">
+        <div class="profile-header">
+            <div class="profile-icon"><i class="fas fa-user"></i></div>
+            <h2 id="profile-phone" style="margin: 0; font-size: 17px; color: #31309D;">Chargement...</h2>
+            <p style="color: #98369D; font-size: 13px; margin-top: 6px; font-weight: bold;">Membre VIP Skills Lab</p>
+        </div>
+        <div class="profile-stats-grid">
+            <div class="mini-stat-card">
+                <h4 class="display-balance-val">0 FCFA</h4>
+                <p>Solde Total</p>
+            </div>
+            <div class="mini-stat-card">
+                <h4 class="display-revenue-val">0 FCFA</h4>
+                <p>Revenus Cumulés</p>
+            </div>
+        </div>
+        <div class="profile-actions">
+            <button class="action-btn btn-recharger" onclick="openRechargeModal()"><i class="fas fa-wallet"></i>Dépôt</button>
+            <button class="action-btn btn-retirer" onclick="openWithdrawModal()"><i class="fas fa-hand-holding-usd"></i>Retrait</button>
+        </div>
+        <div class="menu-list">
+            <div class="menu-item" id="admin-menu-btn" style="display: none; background-color: #222;" onclick="openAdminModal()">
+                <i class="fas fa-user-shield" style="color: #f39c12;"></i>
+                <span style="color: #f39c12; font-weight: bold;">Panneau Administration</span>
+                <i class="fas fa-chevron-right" style="color: #f39c12;"></i>
+            </div>
+
+            <div class="menu-item" onclick="openMyProductsModal()"><i class="fas fa-shopping-bag"></i><span>Mes VIP acheter</span><i class="fas fa-chevron-right"></i></div>
+            
+            <div class="menu-item" onclick="openWalletModal()"><i class="fas fa-credit-card"></i><span>enregistrer numéro de retrait</span><i class="fas fa-chevron-right"></i></div>
+            <div class="menu-item" onclick="openRechargeHistoryModal()"><i class="fas fa-file-invoice-dollar"></i><span>Histoire des recharges</span><i class="fas fa-chevron-right"></i></div>
+            <div class="menu-item" onclick="openHistoryModal()"><i class="fas fa-history"></i><span>Histoire de retrait</span><i class="fas fa-chevron-right"></i></div>
+            <div class="menu-item" onclick="openBonusModal()"><i class="fas fa-gift"></i><span>Bonus échange</span><i class="fas fa-chevron-right"></i></div>
+            <div class="menu-item" onclick="openServiceModal()"><i class="fas fa-headset"></i><span>contacter les Services clients</span><i class="fas fa-chevron-right"></i></div>
+            <div class="menu-item" onclick="openRulesModal()"><i class="fas fa-shield-alt"></i><span>Règles de plateforme</span><i class="fas fa-chevron-right"></i></div>
+            <div class="menu-item" onclick="openAboutModal()"><i class="fas fa-info-circle"></i><span>À propos de nous</span><i class="fas fa-chevron-right"></i></div>
+            <div class="menu-item" onclick="openPasswordModal()"><i class="fas fa-lock"></i><span>Modifier mot de passe</span><i class="fas fa-chevron-right"></i></div>
+            <div class="menu-item" onclick="openDownloadModal()"><i class="fas fa-download"></i><span>Téléchargez l'application</span><i class="fas fa-chevron-right"></i></div>
+        </div>
+        <div class="btn-logout" onclick="logout()">Déconnexion</div>
+    </div>
+
+    <nav class="bottom-nav" id="bottom-nav">
+        <div class="nav-item active" onclick="switchPage('main-dashboard', this)"><i class="fas fa-home"></i>Accueil</div>
+        <div class="nav-item" onclick="switchPage('product-page', this)"><i class="fas fa-th-large"></i>Produit</div>
+        <div class="nav-item" onclick="switchPage('team-page', this); loadTeamStats();"><i class="fas fa-user-friends"></i>Équipe</div>
+        <div class="nav-item" onclick="switchPage('profile-page', this)"><i class="fas fa-user"></i>Mien</div>
+    </nav>   <script>
+        // --- CONFIGURATION FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAnzCEXG6ckt0ZCoxsAc_vMK1kWI4ZLeXI",
+            authDomain: "skills-lab-5a75c.firebaseapp.com",
+            projectId: "skills-lab-5a75c",
+            storageBucket: "skills-lab-5a75c.firebasestorage.app",
+            messagingSenderId: "538814540801",
+            appId: "1:538814540801:web:df18b590911f4fcae26400",
+            measurementId: "G-FZGSB3DSHR"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Variables globales
+        let currentUserUid = null;
+        let currentUserPhone = "";
+        let teamData = { lvl1: [], lvl2: [], lvl3: [] };
+        let teamFirstPurchases = {};
+
+        // =========================================================================
+        // GESTION DE L'ANNONCE (POP-UP)
+        // =========================================================================
+        function closeAnnouncement() {
+            document.getElementById('announcement-modal').style.display = 'none';
+        }
+
+        // =========================================================================
+        // ALERTES ET CONFIRMATIONS PERSONNALISÉES 
+        // =========================================================================
+        function customAlert(message) {
+            document.getElementById('custom-alert-text').innerText = message;
+            document.getElementById('custom-alert-modal').style.display = 'flex';
+        }
+        function closeCustomAlert() {
+            document.getElementById('custom-alert-modal').style.display = 'none';
+        }
+
+        let confirmCallback = null;
+        function customConfirm(message, callback) {
+            document.getElementById('custom-confirm-text').innerText = message;
+            document.getElementById('custom-confirm-modal').style.display = 'flex';
+            confirmCallback = callback;
+        }
+        
+        document.getElementById('btn-confirm-cancel').addEventListener('click', () => {
+            document.getElementById('custom-confirm-modal').style.display = 'none';
+            confirmCallback = null;
+        });
+        
+        document.getElementById('btn-confirm-ok').addEventListener('click', () => {
+            document.getElementById('custom-confirm-modal').style.display = 'none';
+            if (confirmCallback) {
+                confirmCallback();
+                confirmCallback = null;
+            }
+        });
+
+        // =========================================================================
+        // DETECTION AUTOMATIQUE DU CODE DE PARRAINAGE DEPUIS LE LIEN
+        // =========================================================================
+        window.addEventListener('DOMContentLoaded', (event) => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlRefCode = urlParams.get('ref');
+            if (urlRefCode) {
+                let refInput = document.getElementById('reg-ref');
+                if(refInput) refInput.value = urlRefCode.toUpperCase();
+            }
+        });
+
+        function filterAdminCards(inputId, containerId) {
+            let filter = document.getElementById(inputId).value.toLowerCase();
+            let container = document.getElementById(containerId);
+            if(!container) return;
+            let cards = container.getElementsByClassName('admin-user-card');
+            for (let i = 0; i < cards.length; i++) {
+                let text = cards[i].innerText.toLowerCase();
+                cards[i].style.display = text.includes(filter) ? "" : "none";
+            }
+        }
+
+        // =========================================================================
+        // GESTION INSTANTANÉE DU BOUTON RETOUR PHYSIQUE (ANTI-E-DROID)
+        // =========================================================================
+        window.addEventListener('hashchange', function (event) {
+            let hash = window.location.hash;
+            if (hash === '' || hash === '#') {
+                const modalsToClose = [
+                    'recharge-modal', 'withdraw-modal', 'wallet-modal', 'service-modal',
+                    'bonus-modal', 'password-modal', 'history-modal', 'recharge-history-modal',
+                    'rules-modal', 'about-modal', 'download-modal', 'team-detail-modal', 'admin-modal',
+                    'my-products-modal'
+                ];
+                modalsToClose.forEach(id => {
+                    let el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+                let menu = document.getElementById('country-menu');
+                if (menu) menu.classList.remove('show');
+            } 
+            else if (hash === '#recharge') { showStep('step-amount'); } 
+            else if (hash === '#step-country') { showStep('step-country'); } 
+            else if (hash === '#step-gopay') { showStep('step-gopay'); } 
+            else if (hash === '#step-gopay-details') { showStep('step-gopay-details'); }
+        });
+
+        // --- AUTHENTIFICATION & ECRAN DE CHARGEMENT ---
+        auth.onAuthStateChanged((user) => {
+            let splash = document.getElementById('splash-screen');
+            if(splash) splash.style.display = 'none';
+
+            if (user) { 
+                currentUserUid = user.uid;
+                showDashboard(user); 
+                checkAndClaimDailyRevenues(user.uid); 
+            } else { 
+                currentUserUid = null;
+                document.getElementById('register-page').classList.add('active');
+                document.querySelectorAll('.page').forEach(p => {
+                    if(p.id !== 'register-page') p.classList.remove('active');
+                });
+                document.getElementById('bottom-nav').style.display = 'none'; 
+            }
+        });
+
+        function switchPage(pageId, navElement) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            if(navElement) navElement.classList.add('active');
+            window.location.hash = ''; 
+        }
+
+        let isLoginMode = false;
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('auth-card').classList.toggle('mode-login');
+            document.getElementById('btn-submit').innerText = isLoginMode ? "Se connecter" : "S'inscrire";
+            document.getElementById('switch-mode-text').innerHTML = isLoginMode ? "Pas de compte ? <b style='color:var(--text-main);'>S'inscrire</b>" : "Déjà membre ? <b style='color:var(--text-main);'>Se connecter</b>";
+        }
+
+        async function handleSubmit() {
+            const phone = document.getElementById('reg-phone').value;
+            const pass = document.getElementById('reg-pass').value;
+            const code = document.getElementById('selected-code').innerText;
+            const refCode = document.getElementById('reg-ref').value.trim().toUpperCase();
+            
+            if(!phone || !pass) { customAlert("Veuillez remplir les champs"); return; }
+            const fullPhone = code + phone;
+            const fakeEmail = `${fullPhone.replace('+','')}@hepu.com`; // Gardé pour la rétrocompatibilité des anciens comptes
+
+            if (isLoginMode) {
+                try { await auth.signInWithEmailAndPassword(fakeEmail, pass); } 
+                catch (error) { customAlert("Erreur : Ce numéro n'est pas enregistré ou le mot de passe est incorrect."); }
+            } else {
+                const confirmPass = document.getElementById('reg-pass-confirm').value;
+                if(pass !== confirmPass) { customAlert("Mots de passe différents"); return; }
+                try {
+                    const userCredential = await auth.createUserWithEmailAndPassword(fakeEmail, pass);
+                    await db.collection("users").doc(userCredential.user.uid).set({
+                        uid: userCredential.user.uid,
+                        phoneNumber: fullPhone, 
+                        balance: 500,
+                        revenue: 0,
+                        inviteCode: "skil" + fullPhone.substring(fullPhone.length - 4),
+                        referredBy: refCode || "Aucun",
+                        blocked: false,
+                        claimedBonuses: [],
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (error) { customAlert(error.message); }
+            }
+        }
+
+        async function showDashboard(user) {
+            document.getElementById('register-page').classList.remove('active');
+            document.getElementById('main-dashboard').classList.add('active');
+            document.getElementById('bottom-nav').style.display = 'flex'; 
+            
+            let annModal = document.getElementById('announcement-modal');
+            if(annModal) annModal.style.display = 'flex';
+            
+            let instantPhone = user.email ? user.email.replace("@hepu.com", "") : "Utilisateur";
+            if(!instantPhone.startsWith('+') && instantPhone !== "Utilisateur") { instantPhone = '+' + instantPhone; }
+
+            const cachedData = localStorage.getItem('hepu_user_data_' + user.uid);
+            if (cachedData) updateUI(JSON.parse(cachedData), instantPhone);
+            else updateUI({ balance: 0, revenue: 0, phoneNumber: instantPhone }, instantPhone);
+            
+            db.collection("users").doc(user.uid).onSnapshot((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    let cleanPhone = (data.phoneNumber || instantPhone).replace(/\s+/g, '').replace('+', '');
+                    if(data.blocked === true && cleanPhone !== "22666867654" && cleanPhone !== "22604650382") {
+                        customAlert("Votre compte a été gelé par l'administration.");
+                        logout();
+                        return;
+                    }
+                    localStorage.setItem('hepu_user_data_' + user.uid, JSON.stringify(data));
+                    updateUI(data, instantPhone);
+                }
+            });
+
+            loadDynamicMarquee();
+            loadMyProducts();
+            initChart();
+        }
+
+        function updateUI(data, fallbackPhone) {
+            const balFormatted = (data.balance || 0).toLocaleString() + " FCFA";
+            const revFormatted = (data.revenue || 0).toLocaleString() + " FCFA";
+            const phone = data.phoneNumber || fallbackPhone;
+            currentUserPhone = phone;
+            
+            localStorage.setItem('user_balance', data.balance || 0);
+
+            document.querySelectorAll('.display-balance-val').forEach(el => el.innerText = balFormatted);
+            document.querySelectorAll('.display-revenue-val').forEach(el => el.innerText = revFormatted);
+            
+            document.getElementById('profile-phone').innerText = phone;
+            
+            let shortPhone = phone.length >= 4 ? phone.substring(phone.length - 4) : phone;
+            const inviteCodeText = "skil" + shortPhone;
+            document.getElementById('my-invite-code').innerText = inviteCodeText;
+            
+            let baseUrl = "https://accessoires-mu.vercel.app/"; 
+            document.getElementById('my-invite-link').innerText = baseUrl + "?ref=" + inviteCodeText;
+
+            let cleanPhone = phone.replace(/\s+/g, '').replace('+', '');
+            const adminBtn = document.getElementById('admin-menu-btn');
+            
+            // Gestion de l'affichage du bouton Admin
+            if (cleanPhone === "22666867654" || cleanPhone === "22604650382") { 
+                if(adminBtn) adminBtn.style.display = 'flex'; 
+            } else {
+                if(adminBtn) adminBtn.style.display = 'none'; 
+            }
+        }
+
+        // Configuration spéciale pour l'admin secondaire
+        function setupAdminPanelForUser(cleanPhone) {
+            if (cleanPhone === "22604650382") {
+                document.getElementById('tab-admin-users').style.display = 'none';
+                document.getElementById('tab-admin-dep-pending').style.display = 'none';
+                document.getElementById('tab-admin-dep-confirmed').style.display = 'none';
+                switchAdminTab('admin-withdraw', document.getElementById('tab-admin-withdraw'));
+            } else {
+                document.getElementById('tab-admin-users').style.display = 'block';
+                document.getElementById('tab-admin-dep-pending').style.display = 'block';
+                document.getElementById('tab-admin-dep-confirmed').style.display = 'block';
+                switchAdminTab('admin-users', document.getElementById('tab-admin-users'));
+            }
+        }
+
+        async function loadDynamicMarquee() {
+            try {
+                const snap = await db.collection("deposits").where("status", "==", "confirmed").limit(5).get();
+                let text = "";
+                snap.forEach(doc => {
+                    let d = doc.data();
+                    let p = d.userPhone || "";
+                    let masked = p.length > 4 ? "******" + p.substring(p.length - 4) : "******";
+                    text += `Utilisateur ${masked} a rechargé ${(d.amount||0).toLocaleString()} FCFA — `;
+                });
+                if(text === "") text = "Bienvenue sur Skills lab Investissement ! Le futur de l'investissement.";
+                document.getElementById('dynamic-marquee').innerText = text;
+            } catch(e) { console.log("Erreur Marquee", e); }
+        }
+
+        // =========================================================================
+        // DISTRIBUTION AUTOMATIQUE 24H
+        // =========================================================================
+        async function checkAndClaimDailyRevenues(uid) {
+            try {
+                const purchasesSnap = await db.collection("purchases")
+                                            .where("uid", "==", uid)
+                                            .where("status", "==", "En cours")
+                                            .get();
+                
+                if(purchasesSnap.empty) return; 
+
+                const userRef = db.collection("users").doc(uid);
+                let totalAdded = 0;
+                const batch = db.batch();
+                let now = Date.now();
+
+                purchasesSnap.forEach(doc => {
+                    let p = doc.data();
+                    let lastTime = p.lastClaimedAt ? p.lastClaimedAt.toMillis() : p.purchasedAt.toMillis();
+                    
+                    let msInDay = 24 * 60 * 60 * 1000;
+                    let daysPassed = Math.floor((now - lastTime) / msInDay);
+                    
+                    if (daysPassed > 0) {
+                        let claimed = p.claimedDays || 0;
+                        let daysToClaim = Math.min(daysPassed, p.days - claimed);
+                        
+                        if (daysToClaim > 0) {
+                            let earnings = daysToClaim * p.dailyRevenue;
+                            totalAdded += earnings;
+                            
+                            let newClaimed = claimed + daysToClaim;
+                            let newLastClaimTime = lastTime + (daysPassed * msInDay); 
+                            
+                            batch.update(doc.ref, {
+                                claimedDays: newClaimed,
+                                lastClaimedAt: firebase.firestore.Timestamp.fromMillis(newLastClaimTime),
+                                status: newClaimed >= p.days ? "Terminé" : "En cours"
+                            });
+                        }
+                    }
+                });
+
+                if (totalAdded > 0) {
+                    await db.runTransaction(async (t) => {
+                        const uDoc = await t.get(userRef);
+                        t.update(userRef, {
+                            balance: (uDoc.data().balance || 0) + totalAdded,
+                            revenue: (uDoc.data().revenue || 0) + totalAdded
+                        });
+                    });
+                    
+                    await batch.commit();
+                    customAlert(`🎉 Félicitations ! Vos produits d'investissement viennent de générer ${totalAdded.toLocaleString()} FCFA !`);
+                    loadMyProducts(); 
+                }
+            } catch(e) { console.log("Erreur calcul des revenus:", e); }
+        }
+
+        // =========================================================================
+        // ACHAT DE PRODUIT ET COMMISSIONS D'ÉQUIPE
+        // =========================================================================
+        function confirmPurchase(productName, price, dailyRevenue, days) {
+            if(!currentUserUid) {
+                customAlert("Veuillez vous connecter pour acheter.");
+                return;
+            }
+            customConfirm(`Voulez-vous vraiment acheter le produit ${productName} pour ${price.toLocaleString()} FCFA ?\n\nL'argent sera déduit de votre solde actuel.`, () => {
+                executePurchase(productName, price, dailyRevenue, days);
+            });
+        }
+
+        async function executePurchase(productName, price, dailyRevenue, days) {
+            try {
+                const userRef = db.collection("users").doc(currentUserUid);
+                const userDoc = await userRef.get();
+                let userData = userDoc.data();
+                let currentBal = userData.balance || 0;
+                
+                if(currentBal < price) {
+                    customAlert("Solde insuffisant. Veuillez recharger votre compte d'abord.");
+                    return;
+                }
+
+                const prevPurchases = await db.collection("purchases").where("uid", "==", currentUserUid).get();
+                let isFirstPurchase = prevPurchases.empty;
+
+                const batch = db.batch();
+                batch.update(userRef, { balance: currentBal - price });
+
+                const newPurchaseRef = db.collection("purchases").doc();
+                batch.set(newPurchaseRef, {
+                    uid: currentUserUid,
+                    userPhone: currentUserPhone,
+                    productName: productName,
+                    price: price,
+                    dailyRevenue: dailyRevenue,
+                    totalRevenue: dailyRevenue * days,
+                    days: days,
+                    claimedDays: 0,
+                    status: "En cours",
+                    purchasedAt: firebase.firestore.Timestamp.now(),
+                    lastClaimedAt: firebase.firestore.Timestamp.now()
+                });
+
+                if (isFirstPurchase && userData.referredBy && userData.referredBy !== "Aucun") {
+                    const snapA = await db.collection("users").where("inviteCode", "==", userData.referredBy).get();
+                    if (!snapA.empty) {
+                        let docA = snapA.docs[0];
+                        let dataA = docA.data();
+                        let commA = price * 0.26; 
+                        batch.update(docA.ref, {
+                            balance: (dataA.balance || 0) + commA,
+                            revenue: (dataA.revenue || 0) + commA 
+                        });
+
+                        if (dataA.referredBy && dataA.referredBy !== "Aucun") {
+                            const snapB = await db.collection("users").where("inviteCode", "==", dataA.referredBy).get();
+                            if (!snapB.empty) {
+                                let docB = snapB.docs[0];
+                                let dataB = docB.data();
+                                let commB = price * 0.02; 
+                                batch.update(docB.ref, {
+                                    balance: (dataB.balance || 0) + commB,
+                                    revenue: (dataB.revenue || 0) + commB
+                                });
+
+                                if (dataB.referredBy && dataB.referredBy !== "Aucun") {
+                                    const snapC = await db.collection("users").where("inviteCode", "==", dataB.referredBy).get();
+                                    if (!snapC.empty) {
+                                        let docC = snapC.docs[0];
+                                        let dataC = docC.data();
+                                        let commC = price * 0.01; 
+                                        batch.update(docC.ref, {
+                                            balance: (dataC.balance || 0) + commC,
+                                            revenue: (dataC.revenue || 0) + commC
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                await batch.commit();
+                customAlert("✅ Achat réussi ! Vos revenus commenceront à s'ajouter automatiquement toutes les 24 heures.");
+                loadMyProducts(); 
+
+            } catch(error) {
+                customAlert(typeof error === 'string' ? error : "Erreur de connexion. L'achat a échoué.");
+            }
+        }
+
+        async function loadMyProducts() {
+            if(!currentUserUid) return;
+            const container = document.getElementById('my-products-list');
+            const counter = document.getElementById('total-my-products');
+
+            try {
+                const snap = await db.collection("purchases").where("uid", "==", currentUserUid).get();
+                if (counter) counter.innerText = snap.size;
+
+                if (snap.empty) {
+                    if(container) container.innerHTML = `<div style="text-align: center; margin-top: 80px; color: #666;"><i class="fas fa-box-open" style="font-size: 60px; margin-bottom: 15px; opacity: 0.3;"></i><p style="font-size: 14px; font-weight: bold;">Aucune commande pour le moment</p></div>`;
+                    return;
+                }
+
+                let arr = [];
+                snap.forEach(d => arr.push(d.data()));
+                arr.sort((a,b) => (b.purchasedAt?.seconds || 0) - (a.purchasedAt?.seconds || 0));
+
+                let html = "";
+                arr.forEach(p => {
+                    let dtObj = p.purchasedAt ? p.purchasedAt.toDate() : new Date();
+                    let dateStr = dtObj.toLocaleDateString('fr-FR') + ' à ' + dtObj.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+                    let statusColor = p.status === "En cours" ? "#27ae60" : "#999";
+                    let claimed = p.claimedDays || 0;
+                    let obtainedRev = claimed * p.dailyRevenue;
+                    
+                    html += `
+                        <div class="my-order-card" style="background:var(--card-bg); border-color:var(--border-color);">
+                            <div class="my-order-header" style="border-bottom-color:var(--border-color);">
+                                <h4 class="my-order-title" style="color:#f39c12;">${p.productName}</h4>
+                                <span class="my-order-status" style="background:${statusColor};">${p.status}</span>
+                            </div>
+                            <div class="my-order-row">
+                                <span class="my-order-label">Date d'achat :</span>
+                                <span class="my-order-val">${dateStr}</span>
+                            </div>
+                            <div class="my-order-row">
+                                <span class="my-order-label">Prix d'achat :</span>
+                                <span class="my-order-val highlight">${(p.price||0).toLocaleString()} F</span>
+                            </div>
+                            <div class="my-order-row">
+                                <span class="my-order-label">Revenu Quotidien :</span>
+                                <span class="my-order-val success">+${(p.dailyRevenue||0).toLocaleString()} F</span>
+                            </div>
+                            <div class="my-order-row">
+                                <span class="my-order-label">Revenu Total prévu :</span>
+                                <span class="my-order-val">${(p.totalRevenue||0).toLocaleString()} F</span>
+                            </div>
+                            <div class="my-order-row" style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-color);">
+                                <span class="my-order-label" style="color:var(--yellow-main); font-weight:bold;">Revenus Obtenus :</span>
+                                <span class="my-order-val success" style="font-size:14px;">${obtainedRev.toLocaleString()} F (${claimed}/${p.days} jrs)</span>
+                            </div>
+                        </div>`;
+                });
+                
+                if (container) container.innerHTML = html;
+
+            } catch (e) {
+                if (container) container.innerHTML = "<p style='text-align:center;'>Erreur de chargement de vos produits.</p>";
+            }
+        }
+
+        function openMyProductsModal() {
+            window.location.hash = 'my-products';
+            document.getElementById('my-products-modal').style.display = 'flex';
+            loadMyProducts();
+        }
+        function closeMyProductsModal() {
+            document.getElementById('my-products-modal').style.display = 'none';
+            if(window.location.hash === '#my-products') window.history.back();
+        }
+
+        async function loadTeamStats() {
+            if(!currentUserUid) return;
+            try {
+                const usersSnap = await db.collection("users").get();
+                let allUsers = [];
+                usersSnap.forEach(doc => allUsers.push({id: doc.id, ...doc.data()}));
+
+                const purchasesSnap = await db.collection("purchases").get();
+                let allPurchases = [];
+                purchasesSnap.forEach(doc => allPurchases.push(doc.data()));
+                allPurchases.sort((a,b) => (a.purchasedAt?.seconds || 0) - (b.purchasedAt?.seconds || 0)); 
+                
+                let firstPurchases = {};
+                allPurchases.forEach(d => {
+                    if(!firstPurchases[d.uid]) {
+                        firstPurchases[d.uid] = parseFloat(d.price);
+                    }
+                });
+                teamFirstPurchases = firstPurchases;
+
+                let shortPhone = currentUserPhone.length >= 4 ? currentUserPhone.substring(currentUserPhone.length - 4) : currentUserPhone;
+                let myCode = "Skil" + shortPhone;
+                
+                teamData.lvl1 = allUsers.filter(u => u.referredBy === myCode);
+                let lvl1Codes = teamData.lvl1.map(u => u.inviteCode);
+                let commA = teamData.lvl1.reduce((sum, u) => sum + (firstPurchases[u.uid] || 0) * 0.26, 0);
+
+                teamData.lvl2 = allUsers.filter(u => lvl1Codes.includes(u.referredBy));
+                let lvl2Codes = teamData.lvl2.map(u => u.inviteCode);
+                let commB = teamData.lvl2.reduce((sum, u) => sum + (firstPurchases[u.uid] || 0) * 0.02, 0);
+
+                teamData.lvl3 = allUsers.filter(u => lvl2Codes.includes(u.referredBy));
+                let commC = teamData.lvl3.reduce((sum, u) => sum + (firstPurchases[u.uid] || 0) * 0.01, 0);
+
+                document.getElementById('lvl1-count-main').innerText = teamData.lvl1.length;
+                document.getElementById('lvl1-recharge-main').innerText = "+ " + commA.toLocaleString() + " F";
+                
+                document.getElementById('lvl2-count-main').innerText = teamData.lvl2.length;
+                document.getElementById('lvl2-recharge-main').innerText = "+ " + commB.toLocaleString() + " F";
+                
+                document.getElementById('lvl3-count-main').innerText = teamData.lvl3.length;
+                document.getElementById('lvl3-recharge-main').innerText = "+ " + commC.toLocaleString() + " F";
+
+                document.getElementById('total-invites-main').innerText = teamData.lvl1.length + teamData.lvl2.length + teamData.lvl3.length;
+                document.getElementById('total-team-rev-main').innerText = "+ " + (commA + commB + commC).toLocaleString() + " F";
+
+            } catch(e) { console.log("Erreur chargement équipe:", e); }
+        }
+
+        function openTeamDetailModal() { 
+            window.location.hash = 'team-detail';
+            document.getElementById('team-detail-modal').style.display = 'flex'; 
+            
+            document.getElementById('tab-lvl1-count').innerText = `Niv A (${teamData.lvl1.length})`;
+            document.getElementById('tab-lvl1-recharge').innerText = "Amis";
+            document.getElementById('tab-lvl2-count').innerText = `Niv B (${teamData.lvl2.length})`;
+            document.getElementById('tab-lvl2-recharge').innerText = "Amis";
+            document.getElementById('tab-lvl3-count').innerText = `Niv C (${teamData.lvl3.length})`;
+            document.getElementById('tab-lvl3-recharge').innerText = "Amis";
+
+            document.querySelector('.team-detail-tab').click();
+        }
+
+        function closeTeamDetailModal() { 
+            document.getElementById('team-detail-modal').style.display = 'none'; 
+            if (window.location.hash === '#team-detail') window.history.back(); 
+        }
+
+        function switchTeamTab(level, el) {
+            document.querySelectorAll('.team-detail-tab').forEach(tab => tab.classList.remove('active')); 
+            el.classList.add('active');
+            
+            let list = level === 'A' ? teamData.lvl1 : (level === 'B' ? teamData.lvl2 : teamData.lvl3);
+            let html = "";
+            
+            if(list.length === 0) {
+                html = `<div class="no-more-data">Aucun membre à ce niveau</div>`;
+            } else {
+                list.forEach(u => {
+                    let p = u.phoneNumber || "";
+                    let maskPhone = p.length > 9 ? (p.substring(0, 6) + "****" + p.substring(p.length - 3)) : p;
+                    let firstRec = teamFirstPurchases[u.uid] || 0;
+                    let dt = u.createdAt ? u.createdAt.toDate().toLocaleDateString('fr-FR') : "";
+                    
+                    html += `
+                        <div class="team-list-item" style="border-bottom-color:var(--border-color);">
+                            <div class="team-list-icon"><i class="fas fa-user"></i></div>
+                            <div class="team-list-info">
+                                <p class="team-list-phone">${maskPhone}</p>
+                                <p class="team-list-date">${dt}</p>
+                            </div>
+                            <div class="team-list-amount" style="text-align:right;">
+                                <span style="font-size:10px; color:var(--text-dim); display:block;">1er Achat</span>
+                                ${firstRec.toLocaleString()} F
+                            </div>
+                        </div>`;
+                });
+            }
+            document.getElementById('team-list-content').innerHTML = html;
+        }
+
+        async function loadUserWithdrawHistory() {
+            const container = document.getElementById('history-withdraw-list');
+            container.innerHTML = '<div style="text-align:center; padding:30px; color:#888;">Chargement de vos retraits...</div>';
+            if(!currentUserUid) return;
+
+            try {
+                const snap = await db.collection("withdrawals").where("uid", "==", currentUserUid).get();
+                if(snap.empty) {
+                    container.innerHTML = `<div style="text-align: center; margin-top: 80px; color: #666;"><i class="fas fa-box-open" style="font-size: 60px; margin-bottom: 15px; opacity: 0.3;"></i><p style="font-size: 14px; font-weight: bold;">Aucun enregistrement</p></div>`;
+                    return;
+                }
+                
+                let records = []; 
+                snap.forEach(d => records.push({id: d.id, ...d.data()}));
+                records.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
+
+                let html = "";
+                records.forEach(r => {
+                    let sColor = r.status === 'paid' ? '#27ae60' : '#f39c12';
+                    let sText = r.status === 'paid' ? 'Payé' : 'En attente';
+                    let dtObj = r.date ? r.date.toDate() : new Date();
+                    let dateStr = dtObj.toLocaleDateString('fr-FR');
+                    let timeStr = dtObj.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+                    let shortId = (r.id || "TRX").substring(0,8).toUpperCase();
+                    
+                    html += `
+                        <div class="my-order-card" style="background:var(--card-bg); border-color:var(--border-color); border-left: 4px solid ${sColor};">
+                            <div class="my-order-header" style="border-bottom-color:var(--border-color);">
+                                <h4 class="my-order-title" style="color:var(--text-main);"><i class="fas fa-money-bill-wave" style="margin-right:5px; color:#f39c12;"></i> Retrait</h4>
+                                <span class="my-order-status" style="background:${sColor};">${sText}</span>
+                            </div>
+                            <div class="my-order-row">
+                                <span class="my-order-label">Date & Heure:</span>
+                                <span class="my-order-val">${dateStr} à ${timeStr}</span>
+                            </div>
+                            <div class="my-order-row">
+                                <span class="my-order-label">N° Transaction:</span>
+                                <span class="my-order-val" style="color:var(--text-dim);">#${shortId}</span>
+                            </div>
+                            <div class="my-order-row">
+                                <span class="my-order-label">Mode de paiement:</span>
+                                <span class="my-order-val">${r.walletMethod || ''}</span>
+                            </div>
+                            <div class="my-order-row">
+                                <span class="my-order-label">Montant demandé:</span>
+                                <span class="my-order-val" style="color:var(--text-main);">${(r.amount||0).toLocaleString()} F</span>
+                            </div>
+                            <div class="my-order-row" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color);">
+                                <span class="my-order-label" style="color:var(--yellow-main); font-weight:bold;">Montant Net Reçu:</span>
+                                <span class="my-order-val success" style="font-size:14px;">${(r.netAmount||0).toLocaleString()} F</span>
+                            </div>
+                        </div>`;
+                });
+                container.innerHTML = html;
+            } catch(e) { container.innerHTML = "<p style='text-align:center;'>Erreur de chargement.</p>"; }
+        }
+
+        async function loadUserRechargeHistory() {
+            const container = document.getElementById('history-recharge-list');
+            container.innerHTML = '<div style="text-align:center; padding:30px; color:#888;">Chargement de vos recharges...</div>';
+            if(!currentUserUid) return;
+
+            try {
+                const snap = await db.collection("deposits").where("uid", "==", currentUserUid).get();
+                if(snap.empty) {
+                    container.innerHTML = `<div style="text-align: center; margin-top: 80px; color: #666;"><i class="fas fa-box-open" style="font-size: 60px; margin-bottom: 15px; opacity: 0.3;"></i><p style="font-size: 14px; font-weight: bold;">Aucun enregistrement</p></div>`;
+                    return;
+                }
+                let records = []; snap.forEach(d => records.push(d.data()));
+                records.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
+
+                let html = "";
+                records.forEach(r => {
+                    let sColor = r.status === 'confirmed' ? '#27ae60' : (r.status === 'rejected' ? '#e41e26' : '#f39c12');
+                    let sText = r.status === 'confirmed' ? 'Réussi' : (r.status === 'rejected' ? 'Échoué' : 'En vérification');
+                    let dt = r.date ? r.date.toDate() : new Date();
+                    let dateStr = dt.toLocaleDateString('fr-FR') + ' à ' + dt.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+                    html += `<div style="background:var(--card-bg); padding:15px; margin-bottom:10px; border-radius:10px; border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;"><div><p style="margin:0; font-weight:bold; font-size:14px; color:var(--text-main);">Dépôt ${r.operator||''}</p><p style="margin:5px 0 0 0; font-size:11px; color:var(--text-dim);">${dateStr}</p></div><div style="text-align:right;"><p style="margin:0; font-weight:bold; font-size:15px; color:var(--yellow-main);">+${(r.amount||0).toLocaleString()} F</p><p style="margin:5px 0 0 0; font-size:11px; color:${sColor}; font-weight:bold;">${sText}</p></div></div>`;
+                });
+                container.innerHTML = html;
+            } catch(e) { container.innerHTML = "<p style='text-align:center;'>Erreur de chargement.</p>"; }
+        }
+
+        /* --- LOGIQUE PANNEAU ADMINISTRATION --- */
+        function openAdminModal() {
+            window.location.hash = 'admin';
+            document.getElementById('admin-modal').style.display = 'flex';
+            document.getElementById('search-users').value = '';
+            document.getElementById('search-dep-pending').value = '';
+            document.getElementById('search-dep-confirmed').value = '';
+            document.getElementById('search-withdraw').value = '';
+            
+            let cleanPhone = currentUserPhone.replace(/\s+/g, '').replace('+', '');
+            setupAdminPanelForUser(cleanPhone);
+        }
+        function closeAdminModal() {
+            document.getElementById('admin-modal').style.display = 'none';
+            if (window.location.hash === '#admin') window.history.back();
+        }
+
+        function switchAdminTab(tabId, el) {
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            document.querySelectorAll('.admin-content-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.querySelectorAll('.admin-search-bar').forEach(bar => bar.value = '');
+
+            if (tabId === 'admin-users') loadAdminUsers();
+            if (tabId === 'admin-dep-pending') loadAdminDeposits('pending', 'admin-list-dep-pending');
+            if (tabId === 'admin-dep-confirmed') loadAdminDeposits('confirmed', 'admin-list-dep-confirmed');
+            if (tabId === 'admin-withdraw') loadAdminWithdrawals();
+            if (tabId === 'admin-bonus') loadAdminBonuses();
+        }
+
+        async function loadAdminUsers() {
+            const listDiv = document.getElementById('admin-list-users');
+            const totalDisplay = document.getElementById('admin-total-users');
+            listDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#888;">Récupération des données...</div>';
+            
+            try {
+                const usersSnap = await db.collection("users").get();
+                if(totalDisplay) totalDisplay.innerText = usersSnap.size;
+
+                if(usersSnap.empty) {
+                    listDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#888;">Aucun utilisateur trouvé.</div>';
+                    return;
+                }
+
+                const depSnap = await db.collection("deposits").get();
+                let rechargeTotals = {};
+                depSnap.forEach(doc => {
+                    let d = doc.data();
+                    if(d.status === "confirmed") {
+                        if(!rechargeTotals[d.uid]) rechargeTotals[d.uid] = 0;
+                        rechargeTotals[d.uid] += parseFloat(d.amount) || 0;
+                    }
+                });
+
+                let users = [];
+                usersSnap.forEach(doc => users.push({id: doc.id, ...doc.data()}));
+                users.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+                listDiv.innerHTML = '';
+                users.forEach(u => {
+                    let totalRecharged = rechargeTotals[u.id] || 0;
+                    let isBlocked = u.blocked === true;
+                    let blockBtnText = isBlocked ? "Débloquer" : "Bloquer";
+                    let blockBtnColor = isBlocked ? "#27ae60" : "#f39c12";
+                    let cardClass = isBlocked ? "admin-user-card blocked" : "admin-user-card";
+                    let dtObj = u.createdAt ? u.createdAt.toDate() : new Date();
+                    let dateInsc = dtObj.toLocaleDateString('fr-FR') + ' à ' + dtObj.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+                    let parrain = u.referredBy && u.referredBy !== "Aucun" ? u.referredBy : "Aucun";
+
+                    let invitedHtml = "";
+                    let invitedUsers = users.filter(x => x.referredBy === u.inviteCode);
+                    
+                    if(invitedUsers.length > 0) {
+                        invitedHtml = `<div style="margin-top:8px; font-size:11px; background:#222; padding:8px; border-radius:5px; border-left: 2px solid #f39c12;"><b>${invitedUsers.length} Ami(s) invité(s) :</b><br>`;
+                        invitedUsers.forEach(inv => {
+                            let invRecharge = rechargeTotals[inv.id] || 0;
+                            invitedHtml += `<span style="color:#f39c12;">• ${inv.phoneNumber}</span> (Recharge totale: <b style="color:#27ae60">${invRecharge}F</b>)<br>`;
+                        });
+                        invitedHtml += `</div>`;
+                    } else {
+                        invitedHtml = `<div style="margin-top:8px; font-size:11px; color:var(--text-dim);">Aucun ami invité.</div>`;
+                    }
+
+                    listDiv.innerHTML += `
+                        <div class="${cardClass}">
+                            <div class="admin-user-row"><span class="admin-user-label">Téléphone:</span><span class="admin-user-val">${u.phoneNumber}</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">Mot de passe:</span><span class="admin-user-val" style="color:#f39c12; font-size:10px;">Crypté (Sécurité Firebase)</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">Solde Compte:</span><span class="admin-user-val" style="color:#27ae60; font-size:14px;">${(u.balance || 0).toLocaleString()} F</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">Revenu Cumulé:</span><span class="admin-user-val" style="color:var(--yellow-main);">${(u.revenue || 0).toLocaleString()} F</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">Total Rechargé:</span><span class="admin-user-val">${totalRecharged.toLocaleString()} F</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">Inscrit le:</span><span class="admin-user-val">${dateInsc}</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">Code du Parrain:</span><span class="admin-user-val">${parrain}</span></div>
+                            ${invitedHtml}
+                            <div class="admin-user-actions">
+                                <button class="admin-btn-small btn-edit" style="flex:1; padding:10px; background:#f39c12; color:#000;" onclick="editUserBalance('${u.id}', ${u.balance || 0}, '${u.phoneNumber}')"><i class="fas fa-edit"></i> Solde</button>
+                                <button class="admin-btn-small" style="flex:1; background:${blockBtnColor}; padding:10px;" onclick="toggleBlockUser('${u.id}', ${isBlocked})"><i class="fas fa-ban"></i> ${blockBtnText}</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                filterAdminCards('search-users', 'admin-list-users');
+            } catch(e) { listDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#f39c12;">Erreur: ' + e.message + '</div>'; }
+        }
+
+        async function editUserBalance(uid, currentBal, phone) {
+            let newVal = prompt(`Nouveau solde pour ${phone} :`, currentBal);
+            if (newVal !== null && newVal !== "") {
+                await db.collection("users").doc(uid).update({ balance: parseFloat(newVal) });
+                customAlert("Solde mis à jour !"); loadAdminUsers();
+            }
+        }
+
+        function toggleBlockUser(uid, isBlocked) {
+            let action = isBlocked ? "Débloquer" : "Bloquer";
+            customConfirm(`Voulez-vous vraiment ${action} cet utilisateur ?`, async () => {
+                await db.collection("users").doc(uid).update({ blocked: !isBlocked });
+                customAlert(`L'utilisateur a été ${isBlocked ? 'débloqué' : 'bloqué'}.`);
+                loadAdminUsers();
+            });
+        }
+
+        async function loadAdminDeposits(status, listId) {
+            const listDiv = document.getElementById(listId);
+            listDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#888;">Chargement...</div>';
+            try {
+                const snapshot = await db.collection("deposits").get();
+                let deps = [];
+                snapshot.forEach(doc => {
+                    let d = doc.data();
+                    if(d.status === status) deps.push({id: doc.id, ...d});
+                });
+                
+                if(deps.length === 0) { listDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#888;">Aucun dépôt trouvé.</div>'; return; }
+                deps.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
+
+                listDiv.innerHTML = '';
+                deps.forEach(d => {
+                    let dtObj = d.date ? d.date.toDate() : new Date();
+                    let dateStr = dtObj.toLocaleDateString('fr-FR') + ' à ' + dtObj.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+                    let shortId = d.id.substring(0,8).toUpperCase();
+                    let numeroEnvoi = d.senderPhone || "Non précisé";
+
+                    let actionsHtml = status === 'pending' ? 
+                        `<div style="display:flex; gap:10px; margin-top:10px;">
+                            <button class="admin-btn-small btn-approve" style="flex:1; padding:10px;" onclick="approveDeposit('${d.id}', '${d.uid}', ${d.amount})"><i class="fas fa-check"></i> Valider</button>
+                            <button class="admin-btn-small btn-reject" style="flex:1; padding:10px; background:#f39c12;" onclick="rejectDeposit('${d.id}')"><i class="fas fa-times"></i> Refuser</button>
+                         </div>` 
+                        : `<div style="margin-top:10px; color:#27ae60; font-weight:bold; text-align:center;"><i class="fas fa-check-circle"></i> Approuvé</div>`;
+
+                    listDiv.innerHTML += `
+                        <div class="admin-user-card" style="border-left:4px solid ${status === 'pending' ? '#f39c12' : '#27ae60'};">
+                            <div class="admin-user-row"><span class="admin-user-label">Client (Compte):</span><span class="admin-user-val">${d.userPhone}</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">N° D'Envoi (Paiement):</span><span class="admin-user-val" style="color:#f39c12;">${numeroEnvoi}</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">N° Transaction:</span><span class="admin-user-val" style="color:var(--text-dim);">#${shortId}</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">Date & Heure:</span><span class="admin-user-val">${dateStr}</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">Mode de paiement:</span><span class="admin-user-val">${d.operator}</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">Montant à recharger:</span><span class="admin-user-val" style="color:var(--yellow-main); font-size:16px;">${(d.amount||0).toLocaleString()} F</span></div>
+                            ${actionsHtml}
+                        </div>`;
+                });
+                
+                let searchInputId = status === 'pending' ? 'search-dep-pending' : 'search-dep-confirmed';
+                filterAdminCards(searchInputId, listId);
+            } catch(e) { listDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#f39c12;">Erreur.</div>'; }
+        }
+
+        function approveDeposit(docId, userUid, amount) {
+            customConfirm(`Valider ce dépôt de ${amount}F ?`, async () => {
+                try {
+                    let depositAmount = parseFloat(amount);
+                    const userRef = db.collection("users").doc(userUid);
+                    
+                    await db.runTransaction(async (t) => {
+                        const userDoc = await t.get(userRef);
+                        t.update(userRef, { balance: (userDoc.data().balance || 0) + depositAmount });
+                    });
+                    
+                    await db.collection("deposits").doc(docId).update({ status: "confirmed" });
+
+                    customAlert(`Dépôt validé avec succès !`); 
+                    loadAdminDeposits('pending', 'admin-list-dep-pending');
+                } catch(e) { customAlert("Erreur lors de la validation: " + e.message); }
+            });
+        }
+
+        function rejectDeposit(docId) {
+            customConfirm("Refuser ce dépôt ?", async () => {
+                await db.collection("deposits").doc(docId).update({ status: "rejected" }); 
+                loadAdminDeposits('pending', 'admin-list-dep-pending'); 
+            });
+        }
+
+        async function loadAdminWithdrawals() {
+            const listDiv = document.getElementById('admin-list-withdraw');
+            listDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#888;">Chargement...</div>';
+            try {
+                const snapshot = await db.collection("withdrawals").get();
+                let withs = [];
+                snapshot.forEach(doc => {
+                    let d = doc.data();
+                    if(d.status === "pending") withs.push({id: doc.id, ...d});
+                });
+                
+                if(withs.length === 0) { listDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#888;">Aucun retrait en attente.</div>'; return; }
+                withs.sort((a,b) => (b.date?.seconds || 0) - (a.date?.seconds || 0));
+
+                listDiv.innerHTML = '';
+                withs.forEach(d => {
+                    let dtObj = d.date ? d.date.toDate() : new Date();
+                    let dateStr = dtObj.toLocaleDateString('fr-FR') + ' à ' + dtObj.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+                    let shortId = d.id.substring(0,8).toUpperCase();
+                    
+                    let ussdCode = `*144*2*1*${d.walletPhone}*${d.netAmount}#`;
+
+                    listDiv.innerHTML += `
+                        <div class="admin-user-card" style="border-left:4px solid #f39c12;">
+                            <div class="admin-user-row"><span class="admin-user-label">Client:</span><span class="admin-user-val">${d.userPhone}</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">N° Transaction:</span><span class="admin-user-val" style="color:var(--text-dim);">#${shortId}</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">Date & Heure:</span><span class="admin-user-val">${dateStr}</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">Paiement sur:</span><span class="admin-user-val">${d.walletMethod} N° ${d.walletPhone}</span></div>
+                            <div class="admin-user-row"><span class="admin-user-label">Montant Net (à envoyer):</span><span class="admin-user-val" style="color:#f39c12; font-size:16px;">${(d.netAmount||0).toLocaleString()} F</span></div>
+                            
+                            <div style="background:#222; padding:10px; border-radius:8px; border:1px solid #333; text-align:center; margin-top:10px;">
+                                <div style="font-size:10px; color:var(--text-dim); margin-bottom:5px;">Code USSD de paiement :</div>
+                                <div style="font-family:monospace; color:#f39c12; font-weight:bold; font-size:14px; letter-spacing:1px;">${ussdCode}</div>
+                            </div>
+
+                            <div style="margin-top:10px;">
+                                <button class="admin-btn-small btn-approve" style="width:100%; padding:15px; font-size:14px; box-shadow:0 4px 6px rgba(0,0,0,0.3);" onclick="approveAndPayWithdrawal('${d.id}', '${d.walletPhone}', ${d.netAmount})">
+                                    <i class="fas fa-phone"></i> Valider & Ouvrir le clavier d'appel
+                                </button>
+                            </div>
+                        </div>`;
+                });
+                
+                filterAdminCards('search-withdraw', 'admin-list-withdraw');
+            } catch(e) { listDiv.innerHTML = '<div style="text-align:center; padding:15px; color:#f39c12;">Erreur.</div>'; }
+        }
+
+        function approveAndPayWithdrawal(docId, walletPhone, netAmount) {
+            let ussdCode = `*144*2*1*${walletPhone}*${netAmount}#`;
+            customConfirm(`Voulez-vous vraiment valider ce retrait et ouvrir le clavier pour envoyer ${netAmount} F ?\n\nUSSD : ${ussdCode}`, async () => {
+                await db.collection("withdrawals").doc(docId).update({ status: "paid" }); 
+                loadAdminWithdrawals(); 
+                window.location.href = `tel:${ussdCode.replace(/#/g, '%23')}`;
+            });
+        }
+
+        async function adminGenerateBonus() {
+            const codeName = document.getElementById('admin-bonus-name').value.trim().toUpperCase();
+            const amount = parseFloat(document.getElementById('admin-bonus-amount').value);
+            const limit = parseInt(document.getElementById('admin-bonus-limit').value);
+            if(!codeName || !amount || !limit) { customAlert("Remplissez tous les champs"); return; }
+            await db.collection("bonuses").doc(codeName).set({ code: codeName, amount: amount, usesLeft: limit, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+            customAlert("Code généré !"); document.getElementById('admin-bonus-name').value = ""; document.getElementById('admin-bonus-amount').value = ""; loadAdminBonuses();
+        }
+
+        async function loadAdminBonuses() {
+            const tbody = document.getElementById('admin-table-bonuses');
+            try {
+                const snapshot = await db.collection("bonuses").get();
+                tbody.innerHTML = '';
+                
+                let codes = [];
+                snapshot.forEach(doc => {
+                    let d = doc.data();
+                    if(d.usesLeft > 0) codes.push({id: doc.id, ...d});
+                });
+                
+                if(codes.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="color:#888;">Aucun code actif.</td></tr>'; return; }
+                codes.forEach(d => {
+                    tbody.innerHTML += `<tr><td style="font-weight:bold; color:var(--text-main);">${d.code}</td><td style="color:#f39c12;">${d.amount} F</td><td style="color:var(--text-main);">${d.usesLeft}</td><td><button class="admin-btn-small btn-reject" style="background:#f39c12;" onclick="deleteBonus('${d.id}')">X</button></td></tr>`;
+                });
+            } catch(e) { tbody.innerHTML = '<tr><td colspan="4" style="color:#f39c12;">Erreur.</td></tr>'; }
+        }
+        async function deleteBonus(docId) { await db.collection("bonuses").doc(docId).update({ usesLeft: 0 }); loadAdminBonuses(); }
+
+        async function submitUserBonus() {
+            const codeInput = document.getElementById('bonus-code-input').value.trim().toUpperCase();
+            const userDataString = localStorage.getItem('hepu_user_data_' + currentUserUid);
+            if(!userDataString) return;
+            const user = JSON.parse(userDataString);
+            if(!codeInput) { customAlert("Veuillez entrer un code."); return; }
+            
+            try {
+                const bonusRef = db.collection("bonuses").doc(codeInput);
+                const userRef = db.collection("users").doc(currentUserUid);
+                
+                const userDoc = await userRef.get();
+                const userData = userDoc.data();
+                let claimedBonuses = userData.claimedBonuses || [];
+                
+                if (claimedBonuses.includes(codeInput)) {
+                    customAlert("Vous avez déjà utilisé ce code bonus !");
+                    return;
+                }
+
+                const doc = await bonusRef.get();
+                if (doc.exists && doc.data().usesLeft > 0) {
+                    const amount = doc.data().amount;
+                    
+                    await db.runTransaction(async (t) => {
+                        const freshUserDoc = await t.get(userRef);
+                        const freshBonusDoc = await t.get(bonusRef);
+                        
+                        if(freshBonusDoc.data().usesLeft <= 0) throw "Désolé, ce code a atteint sa limite d'utilisation.";
+                        
+                        let currentClaimed = freshUserDoc.data().claimedBonuses || [];
+                        if(currentClaimed.includes(codeInput)) throw "Vous avez déjà utilisé ce code bonus.";
+                        
+                        currentClaimed.push(codeInput);
+
+                        t.update(userRef, { 
+                            balance: (freshUserDoc.data().balance || 0) + amount,
+                            claimedBonuses: currentClaimed
+                        });
+                        t.update(bonusRef, { usesLeft: freshBonusDoc.data().usesLeft - 1 });
+                    });
+                    
+                    customAlert(`Félicitations ! Vous avez reçu ${amount} FCFA.`);
+                    document.getElementById('bonus-code-input').value = ""; closeBonusModal();
+                } else { 
+                    customAlert("Code invalide ou expiré."); 
+                }
+            } catch(e) { customAlert(typeof e === 'string' ? e : "Erreur de connexion."); }
+        }
+
+        async function executePayment() {
+            if(!currentUserUid) return;
+            const depositData = { uid: currentUserUid, userPhone: currentUserPhone, senderPhone: document.getElementById('gopay-phone').value, amount: selectedAmount, operator: selectedOperator, status: "pending", date: firebase.firestore.FieldValue.serverTimestamp() };
+            
+            await db.collection("deposits").add(depositData);
+
+            let ussdDisplay = document.getElementById('ussd-container').style.display;
+            if (ussdDisplay === 'flex' || ussdDisplay === 'block') {
+                let code = document.getElementById('detail-ussd').innerText;
+                window.location.replace(`tel:${code.replace(/#/g, '%23')}`);
+            } else {
+                customAlert("Demande soumise ! Le compte sera crédité sous 10 mins après vérification."); 
+                closeRechargeModal();
+            }
+        }
+
+        async function submitWithdrawal() {
+            const currentHour = new Date().getHours();
+            if (currentHour < 10 || currentHour >= 16) { customAlert("Retraits autorisés entre 10h00 et 16h00 uniquement."); return; }
+            
+            const wName = localStorage.getItem('withdraw_name'); 
+            const wMethod = localStorage.getItem('withdraw_method'); 
+            const wPhone = localStorage.getItem('withdraw_phone');
+            if (!wPhone || !wMethod) { customAlert("Veuillez lier un compte portefeuille dans la section Mien !"); return; }
+            
+            let amt = parseFloat(document.getElementById('withdraw-amount-input').value) || 0;
+            let currentBalance = parseFloat(localStorage.getItem('user_balance') || 0);
+            
+            // MINIMUM RETRAIT 5 00 FCFA
+            if (amt < 500) { customAlert("Le minimum de retrait est de 5 00 FCFA."); return; }
+            if (amt > currentBalance) { customAlert("Solde insuffisant."); return; }
+            
+            try {
+                const purchasesSnap = await db.collection("purchases").where("uid", "==", currentUserUid).get();
+                if (purchasesSnap.empty) {
+                    customAlert("⚠️ Vous devez acheter au moins un produit pour pouvoir effectuer un retrait.");
+                    return;
+                }
+
+                // VÉRIFICATION DU MAXIMUM DE 2 RETRAITS PAR JOUR
+                let today = new Date();
+                today.setHours(0, 0, 0, 0); // Début de la journée actuelle
+                const withSnap = await db.collection("withdrawals")
+                                         .where("uid", "==", currentUserUid)
+                                         .where("date", ">=", today)
+                                         .get();
+                if(withSnap.size >= 2) {
+                    customAlert("Vous avez déjà atteint la limite de 2 retraits pour aujourd'hui.");
+                    return;
+                }
+
+                customConfirm(`Confirmer la demande de retrait de ${amt} F vers votre compte ${wMethod} (${wPhone}) ?`, async () => {
+                    try {
+                        const userRef = db.collection("users").doc(currentUserUid);
+                        await db.runTransaction(async (t) => {
+                            const userDoc = await t.get(userRef);
+                            if (userDoc.data().balance >= amt) t.update(userRef, { balance: userDoc.data().balance - amt });
+                            else throw "Solde insuffisant.";
+                        });
+                        
+                        await db.collection("withdrawals").add({ 
+                            uid: currentUserUid, 
+                            userPhone: currentUserPhone, 
+                            amount: amt, 
+                            netAmount: amt * 0.82, 
+                            walletName: wName, 
+                            walletMethod: wMethod, 
+                            walletPhone: wPhone, 
+                            status: "pending", 
+                            date: firebase.firestore.FieldValue.serverTimestamp() 
+                        });
+                        
+                        customAlert("Demande de retrait soumise avec succès ! L'argent arrivera bientôt."); 
+                        closeWithdrawModal();
+                    } catch(e) { customAlert("Erreur : " + e.message); }
+                });
+            } catch(e) {
+                customAlert("Erreur lors de la vérification de vos produits.");
+            }
+        }
+
+        function openWalletModal() { window.location.hash = 'wallet'; document.getElementById('wallet-modal').style.display = 'flex'; updateWalletUI();}
+        function closeWalletModal() { document.getElementById('wallet-modal').style.display = 'none'; if(window.location.hash === '#wallet') window.history.back(); }
+        function saveWallet() { localStorage.setItem('withdraw_name', document.getElementById('wallet-name').value.trim()); localStorage.setItem('withdraw_method', document.getElementById('wallet-method').value); localStorage.setItem('withdraw_phone', document.getElementById('wallet-phone').value.trim()); customAlert("Compte enregistré !"); closeWalletModal(); }
+        function updateWalletUI() { const wMethod = localStorage.getItem('withdraw_method'); const wPhone = localStorage.getItem('withdraw_phone'); if (document.getElementById('wallet-display-text') && wPhone) { document.getElementById('wallet-display-text').innerText = wMethod + " - " + wPhone; document.getElementById('wallet-display-text').style.color = "#f39c12"; } }
+        
+        function openWithdrawModal() { window.location.hash = 'withdraw'; document.getElementById('withdraw-modal').style.display = 'flex'; document.getElementById('withdraw-available-balance').innerText = parseFloat(localStorage.getItem('user_balance')||0).toLocaleString(); document.getElementById('withdraw-amount-input').value = ''; document.getElementById('withdraw-received-amount').innerText = '0.00'; updateWalletUI(); }
+        function closeWithdrawModal() { document.getElementById('withdraw-modal').style.display = 'none'; if(window.location.hash === '#withdraw') window.history.back(); }
+        function calculateWithdrawal() { 
+            const amt = parseFloat(document.getElementById('withdraw-amount-input').value) || 0;
+            if (amt >= 500) {
+                document.getElementById('withdraw-received-amount').innerText = (amt * 0.82).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}); 
+            } else {
+                document.getElementById('withdraw-received-amount').innerText = '0.00';
+            }
+        }
+
+        let selectedAmount = 0; let selectedCountryCode = ""; let selectedOperator = ""; let countdownInterval;
+        function openRechargeModal() { window.location.hash = 'recharge'; document.getElementById('recharge-modal').style.display = 'flex'; showStep('step-amount'); }
+        function closeRechargeModal() { document.getElementById('recharge-modal').style.display = 'none'; clearInterval(countdownInterval); if(window.location.hash.includes('step') || window.location.hash === '#recharge') window.history.back(); }
+        
+        function showStep(stepId) { ['step-amount', 'step-country', 'step-gopay', 'step-gopay-details'].forEach(id => { document.getElementById(id).style.display = 'none'; }); document.getElementById(stepId).style.display = 'block'; }
+        function setRechargeAmount(val, el) { selectedAmount = val; document.getElementById('recharge-amount-input').value = val; document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected')); el.classList.add('selected'); }
+        function goToStepCountry() { selectedAmount = document.getElementById('recharge-amount-input').value; if (selectedAmount < 3000) { customAlert("Minimum 3 000 FCFA"); return; } window.location.hash = 'step-country'; showStep('step-country'); }
+        
+        function setRechargeCountry(code, el) {
+            selectedCountryCode = code; document.querySelectorAll('#step-country .method-card').forEach(b => b.classList.remove('selected')); el.classList.add('selected');
+            document.getElementById('gopay-amount-val').innerText = selectedAmount; document.getElementById('gopay-prefix').innerText = code;
+            
+            const opList = document.getElementById('gopay-operators'); 
+            opList.innerHTML = "";
+            
+            let ops = [];
+            if (code === '+226') {
+                ops = [
+                    {n:'ORANGE', i:'https://upload.wikimedia.org/wikipedia/commons/c/c8/Orange_logo.svg', val:'Orange Money'},
+                    {n:'MOOV', i:'https://upload.wikimedia.org/wikipedia/fr/4/41/Moov_Africa_logo.png', val:'Moov Money'}
+                ];
+            } else if (code === '+237') {
+                ops = [
+                    {n:'ORANGE', i:'https://img.icons8.com/color/100/orange.png', val:'Orange Money'},
+                    {n:'MTN', i:'https://img.icons8.com/color/100/yellow.png', val:'MTN MoMo'}
+                ];
+            } else {
+                // Pour la Côte d'Ivoire (+225) et le Mali (+223)
+                ops = [
+                    {n:'WAVE', i:'https://img.icons8.com/color/100/wave.png', val:'Wave'}
+                ];
+            }
+
+            ops.forEach(op => { opList.innerHTML += `<div class="gopay-op-btn" onclick="selectGopayOp('${op.val}', this)"><img src="${op.i}"><span>${op.n}</span></div>`; });
+            selectedOperator = ""; window.location.hash = 'step-gopay'; showStep('step-gopay');
+        }
+        function selectGopayOp(opVal, el) { selectedOperator = opVal; document.querySelectorAll('.gopay-op-btn').forEach(b => b.classList.remove('selected')); el.classList.add('selected'); }
+        
+        function goToPaymentDetails() {
+            if(!selectedOperator) { customAlert("Sélectionnez un opérateur"); return; }
+            if(!document.getElementById('gopay-phone').value) { customAlert("Saisissez votre numéro"); return; }
+            
+            document.getElementById('detail-op-name').innerText = selectedOperator; 
+            document.getElementById('detail-op-label').innerText = selectedOperator.split(' ')[0].toUpperCase(); 
+            document.getElementById('detail-amount').innerText = selectedAmount; 
+            document.getElementById('detail-sender-phone').innerText = selectedCountryCode + " " + document.getElementById('gopay-phone').value;
+            
+            let recName = (selectedCountryCode === '+226' && selectedOperator === 'Orange Money') ? "sita Ouattara" : 
+                          (selectedCountryCode === '+226' && selectedOperator === 'Moov Money') ? "super king" : 
+                          (selectedOperator === 'Wave') ? "Lankoande fatimata" : 
+                          (selectedCountryCode === '+237' && selectedOperator === 'Orange Money') ? "Salomé atsol" : 
+                          (selectedCountryCode === '+237' && selectedOperator === 'MTN MoMo') ? "stepheny fien ndi" : "Ali";
+                          
+            let recPhone = (selectedCountryCode === '+226' && selectedOperator === 'Orange Money') ? "56734099" : 
+                           (selectedCountryCode === '+226' && selectedOperator === 'Moov Money') ? "02786063" : 
+                           (selectedOperator === 'Wave') ? "02786063" : 
+                           (selectedCountryCode === '+237' && selectedOperator === 'Orange Money') ? "688175529" : 
+                           (selectedCountryCode === '+237' && selectedOperator === 'MTN MoMo') ? "651710796" : "+22666035019";
+                           
+            let ussdCode = (selectedCountryCode === '+226' && selectedOperator === 'Orange Money') ? `*144*2*1*${recPhone}*${selectedAmount}#` : 
+                           (selectedCountryCode === '+226' && selectedOperator === 'Moov Money') ? `*555*2*1*${recPhone}*${selectedAmount}#` : 
+                           (selectedOperator === 'Wave') ? "" : 
+                           (selectedCountryCode === '+237' && selectedOperator === 'Orange Money') ? `#150*1*1*${recPhone}*${selectedAmount}#` :
+                           (selectedCountryCode === '+237' && selectedOperator === 'MTN MoMo') ? `*126*1*${recPhone}*${selectedAmount}#` : "";
+                           
+            document.getElementById('detail-receiver-name').innerText = recName; 
+            document.getElementById('detail-receiver-phone').innerText = recPhone;
+            
+            if (ussdCode) { 
+                document.getElementById('ussd-container').style.display = "flex"; 
+                document.getElementById('detail-ussd').innerText = ussdCode; 
+                document.getElementById('execute-pay-btn').innerText = "Cliquez pour payer"; 
+            } else { 
+                document.getElementById('ussd-container').style.display = "none"; 
+                document.getElementById('execute-pay-btn').innerText = "J'ai effectué le paiement via l'application Wave"; 
+            }
+            
+            window.location.hash = 'step-gopay-details'; showStep('step-gopay-details'); startTimer();
+        }
+        
+        function startTimer() { clearInterval(countdownInterval); let timer = 15 * 60; let display = document.getElementById('payment-timer'); countdownInterval = setInterval(function () { let m = parseInt(timer / 60, 10); let s = parseInt(timer % 60, 10); m = m < 10 ? "0" + m : m; s = s < 10 ? "0" + s : s; display.textContent = m + ":" + s; if (--timer < 0) { clearInterval(countdownInterval); display.textContent = "Expiré"; } }, 1000); }
+        function refreshPayment() { customAlert("En cours de vérification."); closeRechargeModal(); }
+        function copyTextFromId(id) { navigator.clipboard.writeText(document.getElementById(id).innerText); customAlert("Copié !"); }
+
+        function openServiceModal() { window.location.hash = 'service'; document.getElementById('service-modal').style.display = 'flex'; }
+        function closeServiceModal() { document.getElementById('service-modal').style.display = 'none'; if(window.location.hash === '#service') window.history.back(); }
+
+        function openHistoryModal() { window.location.hash = 'history'; document.getElementById('history-modal').style.display = 'flex'; loadUserWithdrawHistory(); }
+        function closeHistoryModal() { document.getElementById('history-modal').style.display = 'none'; if(window.location.hash === '#history') window.history.back(); }
+        
+        function openRechargeHistoryModal() { window.location.hash = 'recharge-history'; document.getElementById('recharge-history-modal').style.display = 'flex'; loadUserRechargeHistory(); }
+        function closeRechargeHistoryModal() { document.getElementById('recharge-history-modal').style.display = 'none'; if(window.location.hash === '#recharge-history') window.history.back(); }
+
+        function openBonusModal() { window.location.hash = 'bonus'; document.getElementById('bonus-modal').style.display = 'flex'; }
+        function closeBonusModal() { document.getElementById('bonus-modal').style.display = 'none'; if(window.location.hash === '#bonus') window.history.back(); }
+        
+        function openRulesModal() { window.location.hash = 'rules'; document.getElementById('rules-modal').style.display = 'flex'; }
+        function closeRulesModal() { document.getElementById('rules-modal').style.display = 'none'; if(window.location.hash === '#rules') window.history.back(); }
+        
+        function openAboutModal() { window.location.hash = 'about'; document.getElementById('about-modal').style.display = 'flex'; }
+        function closeAboutModal() { document.getElementById('about-modal').style.display = 'none'; if(window.location.hash === '#about') window.history.back(); }
+        
+        function openDownloadModal() { window.location.hash = 'download'; document.getElementById('download-modal').style.display = 'flex'; }
+        function closeDownloadModal() { document.getElementById('download-modal').style.display = 'none'; if(window.location.hash === '#download') window.history.back(); }
+        
+        function openPasswordModal() { window.location.hash = 'password'; document.getElementById('password-modal').style.display = 'flex'; }
+        function closePasswordModal() { document.getElementById('password-modal').style.display = 'none'; if(window.location.hash === '#password') window.history.back(); }
+        
+        function updatePassword() {
+            const p1 = document.getElementById('new-password').value; const p2 = document.getElementById('confirm-new-password').value;
+            if(!p1 || !p2) { customAlert("Veuillez remplir tous les champs."); return; }
+            if(p1 !== p2) { customAlert("Les mots de passe ne correspondent pas."); return; }
+            if (auth.currentUser) { auth.currentUser.updatePassword(p1).then(() => { customAlert("Mot de passe modifié !"); document.getElementById('new-password').value = ""; document.getElementById('confirm-new-password').value = ""; closePasswordModal(); }).catch((error) => { customAlert("Erreur. Veuillez vous reconnecter pour modifier le mot de passe."); }); } else { customAlert("Utilisateur non connecté."); }
+        }
+
+        function logout() { auth.signOut().then(() => { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('register-page').classList.add('active'); document.getElementById('bottom-nav').style.display = 'none'; }); }
+        
+        function toggleCountryMenu() { 
+            const menu = document.getElementById('country-menu'); 
+            if (!menu.classList.contains('show')) {
+                window.location.hash = 'country-menu';
+                menu.classList.add('show'); 
+            } else {
+                menu.classList.remove('show');
+                if(window.location.hash === '#country-menu') window.history.back();
+            }
+        }
+        
+        function selectCountry(f, c) { 
+            document.getElementById('selected-flag').innerText = f; 
+            document.getElementById('selected-code').innerText = c; 
+            document.getElementById('country-menu').classList.remove('show'); 
+            if(window.location.hash === '#country-menu') window.history.back(); 
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('hepuChart').getContext('2d');
+            new Chart(ctx, { type: 'line', data: { labels: ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'], datasets: [{ label: 'Performance', data: [12, 19, 15, 25, 22, 30, 45], borderColor: '#f39c12', tension: 0.4, fill: false }] }, options: { plugins: { legend: { display: false } } } });
+        }
+    </script>
+</body>
+</html>
